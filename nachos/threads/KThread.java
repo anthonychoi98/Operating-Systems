@@ -1,4 +1,3 @@
-//Gabes comment
 package nachos.threads;
 
 import nachos.machine.*;
