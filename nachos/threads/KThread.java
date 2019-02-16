@@ -1,4 +1,4 @@
-//Gabes commentkljhnoiuhn
+
 package nachos.threads;
 
 import nachos.machine.*;
