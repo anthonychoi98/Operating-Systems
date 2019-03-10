@@ -413,8 +413,15 @@ public class KThread {
     public static void selfTest() {
 	Lib.debug(dbgThread, "Enter KThread.selfTest");
 	
-	new KThread(new PingTest(1)).setName("forked thread").fork();
+	KThread th1 = new KThread(new PingTest(1));
+	th1.setName("forked thread 1");
+	th1.fork();
 	new PingTest(0).run();
+	th1.join();
+	th1.join();
+	
+	//new KThread(new PingTest(1)).setName("forked thread").fork();
+	//new PingTest(0).run();
     }
 
     private static final char dbgThread = 't';
