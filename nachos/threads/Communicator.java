@@ -16,10 +16,10 @@ public class Communicator {
     /**
      * Allocate a new communicator.
      */
-	Semaphore mutex = new Semaphore(1);
-	Semaphore fullslots = new Semaphore(0);
-	Semaphore emptyslots = new Semaphore(1);
-	Queue<Integer> words = new LinkedList<>();
+	private Semaphore mutex = new Semaphore(1);
+	private Semaphore fullslots = new Semaphore(0);
+	private Semaphore emptyslots = new Semaphore(1);
+	private Queue<Integer> words = new LinkedList<>();
 	
     public Communicator() {
     }

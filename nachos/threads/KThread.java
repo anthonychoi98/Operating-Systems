@@ -2,6 +2,8 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import java.util.LinkedList; 
+import java.util.Queue; 
 
 /**
  * A KThread is a thread that can be used to execute Nachos kernel code. Nachos
@@ -278,14 +280,7 @@ public class KThread {
 	
 	Lib.assertTrue(this != currentThread);
 	
-	//if (thread status = finished){
-	//  return ;
-	//	
-	//else
-	//	disable interrupter
-	//	wait for this thread to finish
-	// 	re-enable interrupter
-	//	return
+
 
     }
 
@@ -457,7 +452,7 @@ public class KThread {
     private int id = numCreated++;
     /** Number of times the KThread constructor was called. */
     private static int numCreated = 0;
-
+    LinkedList<KThread> joinQueue = new LinkedList<KThread>();
     private static ThreadQueue readyQueue = null;
     private static KThread currentThread = null;
     private static KThread toBeDestroyed = null;
