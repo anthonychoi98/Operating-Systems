@@ -276,11 +276,27 @@ public class KThread {
      * thread.
      */
     public void join() {
-	Lib.debug(dbgThread, "Joining to thread: " + toString());
-	
-	Lib.assertTrue(this != currentThread);
-	
+    	Lib.debug(dbgThread, "Joining to thread: " + toString());
 
+    	Lib.assertTrue(this != currentThread);
+//    	Machine.interrupt().disabled();
+
+    	Lib.debug(dbgThread, "jDEBUG");
+    	Lib.debug(dbgThread, String.valueOf(Machine.interrupt().disabled()));
+    	// sets machine state
+    	boolean state = Machine.interrupt().disable();
+
+    		//TODO checks here
+    		
+    		if(joinQueue != null && status != statusFinished && currentThread() != this){
+//    			joinQueue.waitForAccess(currentThread());
+    			joinQueue.add(currentThread());
+    			Machine.interrupt().disable();
+    			currentThread().sleep();
+    			Machine.interrupt().disable();
+    		}
+    		System.out.println("here");
+    		Machine.interrupt().restore(state);
 
     }
 
@@ -412,6 +428,7 @@ public class KThread {
 	th1.setName("forked thread 1");
 	th1.fork();
 	new PingTest(0).run();
+	//System.out.println("before joined forked thread 1 once");
 	th1.join();
 	th1.join();
 	//System.out.println("forked thread 1");
