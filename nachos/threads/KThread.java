@@ -419,7 +419,7 @@ public class KThread {
 	new PingTest(0).run();
 	th1.join();
 	th1.join();
-	System.out.println("forked thread 1");
+	//System.out.println("forked thread 1");
 	
 	//new KThread(new PingTest(1)).setName("forked thread").fork();
 	//new PingTest(0).run();

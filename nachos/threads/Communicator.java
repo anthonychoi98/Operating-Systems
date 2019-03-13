@@ -1,6 +1,9 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import java.util.LinkedList; 
+import java.util.Queue; 
+
 
 /**
  * A <i>communicator</i> allows threads to synchronously exchange 32-bit
@@ -13,6 +16,11 @@ public class Communicator {
     /**
      * Allocate a new communicator.
      */
+	Semaphore mutex = new Semaphore(1);
+	Semaphore fullslots = new Semaphore(0);
+	Semaphore emptyslots = new Semaphore(1);
+	Queue<Integer> words = new LinkedList<>();
+	
     public Communicator() {
     }
 
@@ -27,6 +35,11 @@ public class Communicator {
      * @param	word	the integer to transfer.
      */
     public void speak(int word) {
+    	emptyslots.P();
+    	mutex.P();
+    	words.add(word);
+    	mutex.V();
+    	fullslots.V();
     }
 
     /**
@@ -36,6 +49,11 @@ public class Communicator {
      * @return	the integer transferred.
      */    
     public int listen() {
-	return 0;
+    	fullslots.P();
+    	mutex.P();
+    	int word = words.remove();
+    	emptyslots.V();
+    	
+	return word;
     }
 }
