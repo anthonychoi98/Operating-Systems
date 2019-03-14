@@ -287,16 +287,24 @@ public class KThread {
     	boolean state = Machine.interrupt().disable();
 
     		//TODO checks here
-    		
-    		if(joinQueue != null && status != statusFinished && currentThread() != this){
-//    			joinQueue.waitForAccess(currentThread());
-    			joinQueue.add(currentThread());
-    			Machine.interrupt().disable();
-    			currentThread().sleep();
-    			Machine.interrupt().disable();
-    		}
-    		System.out.println("here");
-    		Machine.interrupt().restore(state);
+
+		if (this.status == statusFinished){
+			return;
+		}
+		if (joinThread == KThread.currentThread()){
+			currentThread().joinThread.sleep();
+		}
+
+		Machine.interrupt().restore(state);
+//    		if(joinQueue != null && status != statusFinished && currentThread() != this){
+////    			joinQueue.waitForAccess(currentThread());
+//    			joinQueue.add(currentThread());
+//    			Machine.interrupt().disable();
+//    			currentThread().sleep();
+//    			Machine.interrupt().disable();
+//    		}
+//    		System.out.println("here");
+//    		Machine.interrupt().restore(state);
 
     }
 
@@ -474,4 +482,5 @@ public class KThread {
     private static KThread currentThread = null;
     private static KThread toBeDestroyed = null;
     private static KThread idleThread = null;
+    private static KThread joinThread = null;
 }
