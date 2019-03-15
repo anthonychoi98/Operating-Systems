@@ -68,10 +68,7 @@ public class Condition2 {
     public void wakeAll() {
 	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 	while(!waitQueue.isEmpty()){
-        Machine.interrupt().disable();
-        waitQueue.pop();
-        waitQueue.getFirst().ready();
-        Machine.interrupt().enable();
+        wake();
     }
     }
 
