@@ -15,7 +15,7 @@ import java.util.LinkedList;
  * @see	nachos.threads.Condition
  */
 public class Condition2 {
-    LinkedList<KThread> waitQueue = new LinkedList<KThread>();
+    LinkedList<KThread> waitQueue;
     /**
      * Allocate a new condition variable.
      *
@@ -44,17 +44,17 @@ public class Condition2 {
 	Machine.interrupt().enable();
 
 	conditionLock.acquire();
-    }
+        }
 
-    /**
-     * Wake up at most one thread sleeping on this condition variable. The
-     * current thread must hold the associated lock.
-     */
-    public void wake() {
+        /**
+         * Wake up at most one thread sleeping on this condition variable. The
+         * current thread must hold the associated lock.
+         */
+        public void wake() {
 
-        Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-        if (!waitQueue.isEmpty()){
-            Machine.interrupt().disable();
+            Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+            if (!waitQueue.isEmpty()){
+                Machine.interrupt().disable();
             waitQueue.pop();
             waitQueue.getFirst().ready();
         }
