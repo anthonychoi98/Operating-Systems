@@ -1,9 +1,8 @@
 package nachos.threads;
 
-import nachos.machine.*;
-
-import javax.crypto.Mac;
 import java.util.LinkedList;
+
+import nachos.machine.*;
 
 /**
  * An implementation of condition variables that disables interrupt()s for
@@ -15,65 +14,72 @@ import java.util.LinkedList;
  * @see	nachos.threads.Condition
  */
 public class Condition2 {
-    LinkedList<KThread> waitQueue;
-    /**
-     * Allocate a new condition variable.
-     *
-     * @param	conditionLock	the lock associated with this condition
-     *				variable. The current thread must hold this
-     *				lock whenever it uses <tt>sleep()</tt>,
-     *				<tt>wake()</tt>, or <tt>wakeAll()</tt>.
-     */
-    public Condition2(Lock conditionLock) {
-	this.conditionLock = conditionLock;
-    }
+	/**
+	 * Allocate a new condition variable.
+	 *
+	 * @param	conditionLock	the lock associated with this condition
+	 *				variable. The current thread must hold this
+	 *				lock whenever it uses <tt>sleep()</tt>,
+	 *				<tt>wake()</tt>, or <tt>wakeAll()</tt>.
+	 */
+	public Condition2(Lock conditionLock) {
+		this.conditionLock = conditionLock;
 
-    /**
-     * Atomically release the associated lock and go to sleep on this condition
-     * variable until another thread wakes it using <tt>wake()</tt>. The
-     * current thread must hold the associated lock. The thread will
-     * automatically reacquire the lock before <tt>sleep()</tt> returns.
-     */
-    public void sleep() {
-	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
+		sleepQ = new LinkedList<KThread>();
+	}
 
-	conditionLock.release();
-	Machine.interrupt().disable();
-	waitQueue.push(KThread.currentThread());
-	KThread.sleep();
-	Machine.interrupt().enable();
+	/**
+	 * Atomically release the associated lock and go to sleep on this condition
+	 * variable until another thread wakes it using <tt>wake()</tt>. The
+	 * current thread must hold the associated lock. The thread will
+	 * automatically reacquire the lock before <tt>sleep()</tt> returns.
+	 */
+	public void sleep() {
+		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
-	conditionLock.acquire();
-        }
+		//release lock
+		conditionLock.release();
+		//disable interrupts
+		boolean status = Machine.interrupt().disable();
+		//add thread to sleep queue
+		sleepQ.add(KThread.currentThread());
+		//sleep
+		KThread.sleep();
+		//enable interrupts
+		Machine.interrupt().restore(status);
+		//reclaim lock
+		conditionLock.acquire();
+	}
 
-        /**
-         * Wake up at most one thread sleeping on this condition variable. The
-         * current thread must hold the associated lock.
-         */
-        public void wake() {
+	/**
+	 * Wake up at most one thread sleeping on this condition variable. The
+	 * current thread must hold the associated lock.
+	 */
+	public void wake() {
+		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
-            Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-            if (!waitQueue.isEmpty()){
-                Machine.interrupt().disable();
-            waitQueue.pop();
-            waitQueue.getFirst().ready();
-        }
-        Machine.interrupt().enable();
-    }
+		if(!sleepQ.isEmpty()) {
+			//disable interrupts
+			boolean status = Machine.interrupt().disable();
+			//remove thread from sleep queue and wake up
+			sleepQ.removeFirst().ready();
+			//enable interrupts
+			Machine.interrupt().restore(status);
+		}
+	}
 
-    /**
-     * Wake up all threads sleeping on this condition variable. The current
-     * thread must hold the associated lock.
-     */
-    public void wakeAll() {
-	Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-	while(!waitQueue.isEmpty()){
-        Machine.interrupt().disable();
-        waitQueue.pop();
-        waitQueue.getFirst().ready();
-        Machine.interrupt().enable();
-    }
-    }
+	/**
+	 * Wake up all threads sleeping on this condition variable. The current
+	 * thread must hold the associated lock.
+	 */
+	public void wakeAll() {
+		Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
-    private Lock conditionLock;
-}
+		//keep calling wake until wake queue is empty
+		while(!sleepQ.isEmpty()) {
+			wake();
+		}
+	}
+
+	private Lock conditionLock;
+	private LinkedList<KThread> sleepQ;
