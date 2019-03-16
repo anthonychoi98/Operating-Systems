@@ -287,37 +287,15 @@ public class KThread {
 //    	Lib.debug(dbgThread, String.valueOf(Machine.interrupt().disabled()));
     	// sets machine state
     	boolean state = Machine.interrupt().disable();
-
-    		//TODO checks here
 		steadyLock.acquire();
 		if (this.status == statusFinished){
 			steadyLock.release();
 			return;
 		}
-		if (joinThread == KThread.currentThread()){
-			Machine.interrupt().disable();
-			this.joinQueue.waitForAccess(currentThread);
-			Machine.interrupt().enable();
-//			this.joinQueue.
-//			this.joinQueue.waitForAccess(currentThread.joinThread);
-////			currentThread.joinThread.sleep();
-////			joinQueue.waitForAccess(currentThread.joinThread);
-////			currentThread.joinThread.sleep();
-			KThread.sleep();
-//
-		}
+		this.joinQueue.waitForAccess(currentThread);
+		currentThread.yield();
 		steadyLock.release();
-
 		Machine.interrupt().restore(state);
-//    		if(joinQueue != null && status != statusFinished && currentThread() != this){
-////    			joinQueue.waitForAccess(currentThread());
-//    			joinQueue.add(currentThread());
-//    			Machine.interrupt().disable();
-//    			currentThread().sleep();
-//    			Machine.interrupt().disable();
-//    		}
-//    		System.out.println("here");
-//    		Machine.interrupt().restore(state);
 
     }
 
