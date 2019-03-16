@@ -194,6 +194,11 @@ public class KThread {
 	Lib.assertTrue(toBeDestroyed == null);
 	toBeDestroyed = currentThread;
 
+	// checks if currentThread's joinThread exists and readies
+	if (currentThread.joinThread != null){
+		currentThread.joinThread.ready();
+	}
+
 
 	currentThread.status = statusFinished;
 	
@@ -279,23 +284,29 @@ public class KThread {
     	Lib.debug(dbgThread, "Joining to thread: " + toString());
     	Lib.assertTrue(this != currentThread);
     	Lib.debug(dbgThread, "jDEBUG");
-    	Lib.debug(dbgThread, String.valueOf(Machine.interrupt().disabled()));
+//    	Lib.debug(dbgThread, String.valueOf(Machine.interrupt().disabled()));
     	// sets machine state
     	boolean state = Machine.interrupt().disable();
 
     		//TODO checks here
-//		steadyLock.acquire();
+		steadyLock.acquire();
 		if (this.status == statusFinished){
-//			steadyLock.release();
+			steadyLock.release();
 			return;
 		}
 		if (joinThread == KThread.currentThread()){
-//			Machine.interrupt().disable();
-			currentThread.joinThread.sleep();
-//			Machine.interrupt().enable();
+			Machine.interrupt().disable();
+			this.joinQueue.waitForAccess(currentThread);
+			Machine.interrupt().enable();
+//			this.joinQueue.
+//			this.joinQueue.waitForAccess(currentThread.joinThread);
+////			currentThread.joinThread.sleep();
+////			joinQueue.waitForAccess(currentThread.joinThread);
+////			currentThread.joinThread.sleep();
+			KThread.sleep();
 //
 		}
-//		steadyLock.release();
+		steadyLock.release();
 
 		Machine.interrupt().restore(state);
 //    		if(joinQueue != null && status != statusFinished && currentThread() != this){
@@ -479,8 +490,9 @@ public class KThread {
     private int id = numCreated++;
     /** Number of times the KThread constructor was called. */
     private static int numCreated = 0;
-    LinkedList<KThread> joinQueue = new LinkedList<KThread>();
-    private static ThreadQueue readyQueue = null;
+    LinkedList<KThread> joinQueueList = new LinkedList<KThread>();
+	private static ThreadQueue joinQueue = ThreadedKernel.scheduler.newThreadQueue(true);
+	private static ThreadQueue readyQueue = null;
     private static KThread currentThread = null;
     private static KThread toBeDestroyed = null;
     private static KThread idleThread = null;
