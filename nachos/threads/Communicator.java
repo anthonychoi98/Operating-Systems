@@ -12,15 +12,15 @@ import java.util.Queue;
  * be paired off at this point.
  */
 public class Communicator {
-    private Lock comLock;      // lock
-    private int message;   // word to be spoken
+    private Lock comLock;      // communicator lock
+    private int message;   // word to be returned
 
-    private boolean messageReady;   // check if word is ready
+    private boolean messageReady;   // check if message is ready
+    private boolean okToConnect;
 
     //conditions for speaking/listening/when they should connect
-    private Condition2 okToSpeak;
-    private Condition2 okToListen;
-    private Condition2 okToConnect;
+    private Condition2 speakCondition;
+    private Condition2 listenCondition;
     /**
      * Allocate a new communicator.
      */
@@ -28,9 +28,9 @@ public class Communicator {
         comLock = new Lock();
         message = 0;
         messageReady = false;
-        okToSpeak = new Condition2(comLock);
-        okToListen = new Condition2(comLock);
-        okToConnect = new Condition2(comLock);
+        okToConnect = false;
+        speakCondition = new Condition2(comLock);
+        listenCondition = new Condition2(comLock);
     }
 
     /**
@@ -44,24 +44,27 @@ public class Communicator {
      * @param	word	the integer to transfer.
      */
     public void speak(int word) {
-    	//acquire lock, subsequently sleep other threads
+    	//acquire lock, subsequently sleep other threads on ready queue
         comLock.acquire();
 
         // sleep speaking condition while message is ready
         while(messageReady) {
-            okToSpeak.sleep();
+            speakCondition.sleep();
         }
 
         // store word as message
         this.message = word;
-        
+       
         //set messageReady flag to true;
         messageReady = true;
 
         // wake sleeping listener
-        okToListen.wake();
-        okToConnect.sleep();
+        listenCondition.wake();
+        
+        //not ok to connect after listeners listen
+        okToConnect = false;
 
+        //release lock
         comLock.release();
     }
 
@@ -74,22 +77,22 @@ public class Communicator {
     public int listen() {
     	//acquire lock
         comLock.acquire();
-
+        
         // sleep listening while message is not ready
         while(!messageReady) {
-            okToListen.sleep();
+            listenCondition.sleep();
         }
         
         //message is set between while loop and setting messageReady back to false
-
         messageReady = false;
-
-        // wake a sleeping speaker
-        okToSpeak.wake();
-        okToConnect.wake();
-
+        
+        // wake a sleeping speaker and set okToconnect as true
+        speakCondition.wake();
+        okToConnect = true;
+        
         comLock.release();
-
+        
+        //return message from speaker
 	    return message;
     }
 
