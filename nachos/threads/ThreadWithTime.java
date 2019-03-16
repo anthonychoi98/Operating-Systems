@@ -1,6 +1,6 @@
 package nachos.threads;
 
-public class ThreadWithTime /*implements Comparable<ThreadWithTime>*/  {
+public class ThreadWithTime implements Comparable<ThreadWithTime>  {
 
     private KThread currentThread;
     private long waitTime;
@@ -19,7 +19,7 @@ public class ThreadWithTime /*implements Comparable<ThreadWithTime>*/  {
         return currentThread;
     }
     
-    /*
+    
     @Override
     public int compareTo(ThreadWithTime otherThreadTimer) {
         // Compare KThreads based on time asleep
@@ -31,6 +31,6 @@ public class ThreadWithTime /*implements Comparable<ThreadWithTime>*/  {
             return -1;
         }
     }
-    */
+    
 
 }
