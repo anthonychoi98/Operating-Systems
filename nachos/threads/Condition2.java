@@ -1,8 +1,6 @@
 package nachos.threads;
 
 import nachos.machine.*;
-
-import javax.crypto.Mac;
 import java.util.LinkedList;
 
 /**
@@ -15,7 +13,6 @@ import java.util.LinkedList;
  * @see	nachos.threads.Condition
  */
 public class Condition2 {
-    LinkedList<KThread> waitQueue;
     /**
      * Allocate a new condition variable.
      *
@@ -26,6 +23,8 @@ public class Condition2 {
      */
     public Condition2(Lock conditionLock) {
         this.conditionLock = conditionLock;
+
+        this.waitQueue = new LinkedList<KThread>();
     }
 
     /**
@@ -37,12 +36,12 @@ public class Condition2 {
     public void sleep() {
         Lib.assertTrue(conditionLock.isHeldByCurrentThread());
 
+
         conditionLock.release();
-        Machine.interrupt().disable();
+        boolean state = Machine.interrupt().disable();
         waitQueue.push(KThread.currentThread());
         KThread.sleep();
-        Machine.interrupt().enable();
-
+        Machine.interrupt().restore(state);
         conditionLock.acquire();
     }
 
@@ -54,11 +53,11 @@ public class Condition2 {
 
         Lib.assertTrue(conditionLock.isHeldByCurrentThread());
         if (!waitQueue.isEmpty()){
-            Machine.interrupt().disable();
-            waitQueue.pop();
+            boolean state = Machine.interrupt().disable();
             waitQueue.getFirst().ready();
+            waitQueue.pop();
+            Machine.interrupt().restore(state);
         }
-        Machine.interrupt().enable();
     }
 
     /**
@@ -68,9 +67,11 @@ public class Condition2 {
     public void wakeAll() {
         Lib.assertTrue(conditionLock.isHeldByCurrentThread());
         while(!waitQueue.isEmpty()){
-            wake();
+            this.wake();
         }
     }
 
     private Lock conditionLock;
+    private LinkedList<KThread> waitQueue;
+
 }
