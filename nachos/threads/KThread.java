@@ -434,6 +434,7 @@ public class KThread {
     public static void selfTest() {
 	Lib.debug(dbgThread, "Enter KThread.selfTest");
 	
+<<<<<<< HEAD
 	KThread th1 = new KThread(new PingTest(1));
 	th1.setName("forked thread 1");
 	th1.fork();
@@ -441,6 +442,23 @@ public class KThread {
 	//System.out.println("before joined forked thread 1 once");
 	th1.join();
 	th1.join();
+=======
+	Communicator communicator = new Communicator();
+
+	Communicator communicator2 = new Communicator();
+	
+	communicator2.speak(101);
+	communicator.speak(99);
+	
+	System.out.println(communicator.listen());
+	
+	System.out.println(communicator2.listen());
+	
+//different instances of communicator listening at same time.
+	
+	
+	
+>>>>>>> parent of 05ee204... using locks for Communicator
 	
 	Communicator com2 = new Communicator();
 	Communicator com = new Communicator();

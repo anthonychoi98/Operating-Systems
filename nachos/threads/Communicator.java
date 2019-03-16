@@ -13,6 +13,7 @@ import java.util.Queue;
  * threads can be paired off at this point.
  */
 public class Communicator {
+<<<<<<< HEAD
 	/*
 	 * Lock communicatorLock; int message; int listeners; Condition2
 	 * listeningCondition; Condition2 speakingCondition; Integer buffer; boolean
@@ -35,6 +36,17 @@ public class Communicator {
 		 = new Condition2(communicatorLock); speakingCondition = new
 		 * Condition2(communicatorLock); buffer = null; messageReady = false;
 		 */
+=======
+    /**
+     * Allocate a new communicator.
+     */
+	Semaphore mutex = new Semaphore(1);
+	Semaphore fullslots = new Semaphore(0);
+	Semaphore emptyslots = new Semaphore(1);
+	Queue<Integer> words = new LinkedList<>();
+	
+    public Communicator() {
+>>>>>>> parent of 05ee204... using locks for Communicator
     }
 
     /**
@@ -48,6 +60,7 @@ public class Communicator {
      * @param	word	the integer to transfer.
      */
     public void speak(int word) {
+<<<<<<< HEAD
 		/*
 		 * communicatorLock.acquire();
 		 * 
@@ -69,6 +82,13 @@ public class Communicator {
 		fullslots.V();
 		 
 		
+=======
+    	emptyslots.P();
+    	mutex.P();
+    	words.add(word);
+    	mutex.V();
+    	fullslots.V();
+>>>>>>> parent of 05ee204... using locks for Communicator
     }
 
     /**
@@ -78,6 +98,7 @@ public class Communicator {
      * @return	the integer transferred.
      */    
     public int listen() {
+<<<<<<< HEAD
 		/*
 		 * communicatorLock.acquire();
 		 * 
@@ -104,6 +125,13 @@ public class Communicator {
 		 return word;
 		 
 		 
+=======
+    	fullslots.P();
+    	mutex.P();
+    	int word = words.remove();
+    	emptyslots.V();
+    	System.out.println("here"); 
+	return word;
+>>>>>>> parent of 05ee204... using locks for Communicator
     }
-    
 }
