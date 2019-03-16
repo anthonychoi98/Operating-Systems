@@ -429,12 +429,15 @@ public class KThread {
 
 	Communicator communicator2 = new Communicator();
 	
-	communicator2.speak(101);
+	//communicator2.speak(101);
 	communicator.speak(99);
+	communicator.speak(1000);
 	
 	System.out.println(communicator.listen());
+	System.out.println(communicator.listen());
 	
-	System.out.println(communicator2.listen());
+	  
+	//System.out.println(communicator2.listen());
 	
 //different instances of communicator listening at same time.
 	
