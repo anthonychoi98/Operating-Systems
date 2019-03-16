@@ -12,85 +12,79 @@ import java.util.Queue;
  * be paired off at this point.
  */
 public class Communicator {
-	  /**
-	   * Allocate a new communicator.
-	   */
-	  
-	  private int messages;
-	  private boolean if_message_in_use;
-	  private int wait_listeners;
-	  private int the_speakers;
-	  private Lock the_lock;
-	  private Condition2 speakers_Condition;
-	  private Condition2 listeners_Condition;
-	  
-	  
-	  public Communicator() {
-	    this.messages =0;
-	    this.if_message_in_use = false;
-	    this.wait_listeners =0;
-	    this.the_lock = new Lock();
-	    this.listeners_Condition = new Condition2(this.the_lock);
-	    this.speakers_Condition = new Condition2(this.the_lock);
-	  }
+    /**
+     * Allocate a new communicator.
+     */
+    public Communicator() {
+        lock = new Lock();
+        wordReady = false;
+        okToSpeak = new Condition2(lock);
+        okToListen = new Condition2(lock);
+        okToConnect = new Condition2(lock);
+    }
 
-	  /**
-	   * Wait for a thread to listen through this communicator, and then transfer
-	   * <i>word</i> to the listener.
-	   *
-	   * <p>
-	   * Does not return until this thread is paired up with a listening thread.
-	   * Exactly one listener should receive <i>word</i>.
-	   *
-	   * @param word the integer to transfer.
-	   */
-	  public void speak(int word) {
-	    the_lock.acquire();
-	    the_speakers++;
-	    
-	    while ((if_message_in_use)||(wait_listeners == 0))
-	      speakers_Condition.sleep();
-	   
+    /**
+     * Wait for a thread to listen through this communicator, and then transfer
+     * <i>word</i> to the listener.
+     *
+     * <p>
+     * Does not return until this thread is paired up with a listening thread.
+     * Exactly one listener should receive <i>word</i>.
+     *
+     * @param	word	the integer to transfer.
+     */
+    public void speak(int word) {
+        lock.acquire();
 
-	 
-	    if_message_in_use = true;
-	    messages = word;
-	    
-	    the_speakers--;
-	    listeners_Condition.wake();
-	    
-	    the_lock.release();
-	   
-	  }
-	    
-	    
-	  
-	  /**
-	   * Wait for a thread to speak through this communicator, and then return the
-	   * <i>word</i> that thread passed to <tt>speak()</tt>.
-	   *
-	   * @return the integer transferred.
-	   */
-	  public int listen() {
-	    
-	    the_lock.acquire();
-	    wait_listeners++;
-	    
-	    
+        // while a word is already ready
+        while(wordReady) {
+            okToSpeak.sleep();
+        }
 
-	     
-	     speakers_Condition.wake();
-	     listeners_Condition.sleep();
-	    
-	    
-	    this.thee_word = messages;
-	    if_message_in_use = false;
-	    wait_listeners--;
-	   
-	    speakers_Condition.wake();
-	    the_lock.release();
-	    
-	    return this.thee_word;
-	  }
-	  private int thee_word;
-	}
+        // set the word to be spoken
+        this.word = word;
+
+        wordReady = true;
+
+        // wake sleeping listener
+        okToListen.wake();
+        okToConnect.sleep();
+
+        lock.release();
+    }
+
+    /**
+     * Wait for a thread to speak through this communicator, and then return
+     * the <i>word</i> that thread passed to <tt>speak()</tt>.
+     *
+     * @return	the integer transferred.
+     */
+    public int listen() {
+        lock.acquire();
+
+        // while a word is not ready to be heard
+        while(!wordReady) {
+            okToListen.sleep();
+        }
+
+        // heard word, so set wordReady back to false
+        wordReady = false;
+
+        // wake a sleeping speaker
+        okToSpeak.wake();
+        okToConnect.wake();
+
+        lock.release();
+
+	    return word;
+    }
+
+    private Lock lock;      // lock
+    private int word = 0;   // word to be spoken
+
+    private boolean wordReady;   // check if word is ready
+
+    private Condition2 okToSpeak;
+    private Condition2 okToListen;
+    private Condition2 okToConnect;
+}
