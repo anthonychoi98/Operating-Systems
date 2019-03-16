@@ -66,12 +66,14 @@ public class Alarm {
         // for now, cheat just to get something working (busy waiting is bad)
         long wakeTime = Machine.timer().getTime() + x;
 		/*
-	while (wakeTime > Machine.timer().getTime())
+		while (wakeTime > Machine.timer().getTime())
 	    KThread.yield();
 		 */
-        // create new ThreadWithTime object
+        
+        // create new ThreadWithTime object passing the new wake time
         ThreadWithTime twt = new ThreadWithTime(KThread.currentThread(), wakeTime);
-
+        
+        // disable the interrupt to add new thread object to priority queue 
         Machine.interrupt().disable();
 
         //add ThreadWithTime object to Priority Queue
