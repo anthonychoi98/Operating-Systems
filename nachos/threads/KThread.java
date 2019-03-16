@@ -277,23 +277,25 @@ public class KThread {
      */
     public void join() {
     	Lib.debug(dbgThread, "Joining to thread: " + toString());
-
     	Lib.assertTrue(this != currentThread);
-//    	Machine.interrupt().disabled();
-
     	Lib.debug(dbgThread, "jDEBUG");
     	Lib.debug(dbgThread, String.valueOf(Machine.interrupt().disabled()));
     	// sets machine state
     	boolean state = Machine.interrupt().disable();
 
     		//TODO checks here
-
+//		steadyLock.acquire();
 		if (this.status == statusFinished){
+//			steadyLock.release();
 			return;
 		}
 		if (joinThread == KThread.currentThread()){
-			currentThread().joinThread.sleep();
+//			Machine.interrupt().disable();
+			currentThread.joinThread.sleep();
+//			Machine.interrupt().enable();
+//
 		}
+//		steadyLock.release();
 
 		Machine.interrupt().restore(state);
 //    		if(joinQueue != null && status != statusFinished && currentThread() != this){
@@ -483,4 +485,5 @@ public class KThread {
     private static KThread toBeDestroyed = null;
     private static KThread idleThread = null;
     private static KThread joinThread = null;
+	private static Lock steadyLock = new Lock();
 }
