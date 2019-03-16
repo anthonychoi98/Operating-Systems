@@ -277,26 +277,36 @@ public class KThread {
      */
     public void join() {
     	Lib.debug(dbgThread, "Joining to thread: " + toString());
-
     	Lib.assertTrue(this != currentThread);
-//    	Machine.interrupt().disabled();
     	Lib.debug(dbgThread, "jDEBUG");
     	Lib.debug(dbgThread, String.valueOf(Machine.interrupt().disabled()));
     	// sets machine state
     	boolean state = Machine.interrupt().disable();
 
     		//TODO checks here
-    		
-    		if(joinQueue != null && status != statusFinished && currentThread() != this){
-//    			joinQueue.waitForAccess(currentThread());
-    			joinQueue.add(currentThread());
-    			Machine.interrupt().disable();
-    			//System.out.println("thread: " + currentThread().getName());
-    			//System.out.println("here");
-    			currentThread().sleep();
-    			Machine.interrupt().disable();
-    		}
-    		Machine.interrupt().restore(state);
+//		steadyLock.acquire();
+		if (this.status == statusFinished){
+//			steadyLock.release();
+			return;
+		}
+		if (joinThread == KThread.currentThread()){
+//			Machine.interrupt().disable();
+			currentThread.joinThread.sleep();
+//			Machine.interrupt().enable();
+//
+		}
+//		steadyLock.release();
+
+		Machine.interrupt().restore(state);
+//    		if(joinQueue != null && status != statusFinished && currentThread() != this){
+////    			joinQueue.waitForAccess(currentThread());
+//    			joinQueue.add(currentThread());
+//    			Machine.interrupt().disable();
+//    			currentThread().sleep();
+//    			Machine.interrupt().disable();
+//    		}
+//    		System.out.println("here");
+//    		Machine.interrupt().restore(state);
 
     }
 
@@ -411,7 +421,6 @@ public class KThread {
 	    for (int i=0; i<5; i++) {
 		System.out.println("*** thread " + which + " looped "
 				   + i + " times");
-		System.out.println("thread: " + currentThread().getName());
 		currentThread.yield();
 	    }
 	}
@@ -425,35 +434,22 @@ public class KThread {
     public static void selfTest() {
 	Lib.debug(dbgThread, "Enter KThread.selfTest");
 	
-	Communicator communicator = new Communicator();
-
-	Communicator communicator2 = new Communicator();
+	KThread th1 = new KThread(new PingTest(1));
+	th1.setName("forked thread 1");
+	th1.fork();
+	new PingTest(0).run();
+	//System.out.println("before joined forked thread 1 once");
+	th1.join();
+	th1.join();
 	
-	//communicator2.speak(101);
-	communicator.speak(99);
-	communicator.speak(1000);
+	Communicator com2 = new Communicator();
+	Communicator com = new Communicator();
 	
-	System.out.println(communicator.listen());
-	System.out.println(communicator.listen());
+	com.speak(101);
+	com2.speak(992);
 	
-	  
-	//System.out.println(communicator2.listen());
-	
-//different instances of communicator listening at same time.
-	
-	
-	
-	
-	
-	
-		/*
-		 * KThread th1 = new KThread(new PingTest(1)); KThread th2 = new KThread(new
-		 * PingTest(2)); th1.setName("forked thread 1"); th2.setName("forked thread 2");
-		 * th1.fork(); th2.fork(); new PingTest(0).run(); th1.join();
-		 * 
-		 * th2.join();
-		 */
-	//System.out.println("forked thread 1");
+	System.out.println(com.listen());
+	System.out.println(com2.listen());
 	
 	//new KThread(new PingTest(1)).setName("forked thread").fork();
 	//new PingTest(0).run();
@@ -497,5 +493,5 @@ public class KThread {
     private static KThread toBeDestroyed = null;
     private static KThread idleThread = null;
     private static KThread joinThread = null;
-    
+	private static Lock steadyLock = new Lock();
 }
