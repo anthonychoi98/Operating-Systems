@@ -18,7 +18,7 @@ public class Alarm {
      * alarm.
      */
 
-    // priorityQueue to keep threads organized based off waketimes
+    // priorityQueue to keep threads organized based off wake times
     public PriorityQueue<ThreadWithTime> PQ = new PriorityQueue<ThreadWithTime>();
 
     public Alarm() {
@@ -34,8 +34,7 @@ public class Alarm {
      * that should be run.
      */
     public void timerInterrupt() {
-        //KThread.currentThread().yield();
-
+    	
         while (PQ.peek() != null && PQ.peek().getWaitTime() <= Machine.timer().getTime()) {
             // removes newly woken thread from priority queue
             // wakes up threads with past wake times and puts them in execution
@@ -76,12 +75,13 @@ public class Alarm {
         // disable the interrupt to add new thread object to priority queue 
         Machine.interrupt().disable();
 
-        //add ThreadWithTime object to Priority Queue
+        // add ThreadWithTime object to Priority Queue
         PQ.add(twt);
 
-        //put current thread to sleep
+        // put current thread to sleep
         KThread.sleep();
-
+        
+        // enable interrupt for OS control
         Machine.interrupt().enable();
     }
 }

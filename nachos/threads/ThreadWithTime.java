@@ -1,14 +1,20 @@
 package nachos.threads;
 
 public class ThreadWithTime implements Comparable<ThreadWithTime>  {
-
+	
     private KThread currentThread;
     private long waitTime;
-
-    public ThreadWithTime (KThread thread, long time) {
+    
+    // default constructor
+    public ThreadWithTime() {
+    	
+	}
+    // constructor with thread and time
+	public ThreadWithTime (KThread thread, long time) {
         currentThread = thread;
         waitTime = time;
     }
+	
     // function to get the wait time of the thread object
     public long getWaitTime() {
         return waitTime;
