@@ -277,12 +277,18 @@ public class KThread {
     	Lib.debug(dbgThread, "Joining to thread: " + toString());
     	Lib.assertTrue(this != currentThread);
     	Lib.debug(dbgThread, "jDEBUG");
+    	// disables machine interrupts to ensure atomicity
     	boolean state = Machine.interrupt().disable();
+    	// checks if the thread has finished
 		if (this.status == statusFinished){
+			//if finished, does nothing
 			return;
 		}
+		// ensures access to thread
 		this.joinQueue.waitForAccess(currentThread);
+		// yields current thread
 		currentThread.yield();
+		// restores machine interrupts
 		Machine.interrupt().restore(state);
     }
 

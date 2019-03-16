@@ -35,14 +35,12 @@ public class Condition2 {
      */
     public void sleep() {
         Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-
-
-        conditionLock.release();
-        boolean state = Machine.interrupt().disable();
-        waitQueue.push(KThread.currentThread());
-        KThread.sleep();
-        Machine.interrupt().restore(state);
-        conditionLock.acquire();
+        conditionLock.release(); //releases lock
+        boolean state = Machine.interrupt().disable(); // disables interrupts
+        waitQueue.push(KThread.currentThread()); // adds the currentThread to waitQueue
+        KThread.sleep(); //Sleeps the thread
+        Machine.interrupt().restore(state); // enables interrupts
+        conditionLock.acquire(); // restores lock
     }
 
     /**
@@ -52,11 +50,11 @@ public class Condition2 {
     public void wake() {
 
         Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-        if (!waitQueue.isEmpty()){
-            boolean state = Machine.interrupt().disable();
-            waitQueue.getFirst().ready();
-            waitQueue.pop();
-            Machine.interrupt().restore(state);
+        if (!waitQueue.isEmpty()){ // as long as the waitQueue is not empty
+            boolean state = Machine.interrupt().disable(); // disables interrupts
+            waitQueue.getFirst().ready(); // ready the top of waitQueue
+            waitQueue.pop(); // removes the first entry
+            Machine.interrupt().restore(state); // restores interrupts.
         }
     }
 
@@ -66,8 +64,8 @@ public class Condition2 {
      */
     public void wakeAll() {
         Lib.assertTrue(conditionLock.isHeldByCurrentThread());
-        while(!waitQueue.isEmpty()){
-            this.wake();
+        while(!waitQueue.isEmpty()){ // as long as there are threads in the waitQueue
+            this.wake(); // call wake()
         }
     }
 
