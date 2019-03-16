@@ -1,6 +1,8 @@
 package nachos.threads;
 import nachos.ag.BoatGrader;
 import nachos.machine.Machine;
+//Abigail Plata
+//May be similar to my previous code for Boat.java specifically because I took CSE 150 Fall 2018.
 
 public class Boat
 {
@@ -54,7 +56,8 @@ public class Boat
 
         // Create threads here. See section 3.4 of the Nachos for Java
         // Walkthrough linked from the projects page.
-
+        
+// Using this vvv as an outline for Child and Adult Itinerary
 //	Runnable r = new Runnable() {
 //	    public void run() {
 //                SampleItinerary();
@@ -65,7 +68,7 @@ public class Boat
 //        t.fork();
 
         boolean state = Machine.interrupt().disable();
-
+        //Runnable for both Child and Adult Itinerry's using the outline provided above
         Runnable childThread = new Runnable() {
             public void run() {
                 ChildItinerary();
@@ -118,11 +121,11 @@ public class Boat
             if (!boatLocation && !adultsOnMolokai && childrenAtOahu < 2) { //if the boat is not at molokai, adults are not at molokai and children at oahua < 2
                 boatCounter += 2;
                 bg.AdultRowToMolokai();
-                adultsAtOahu--;
+                adultsAtOahu--; //decrement population of adults
                 adultsOnMolokai = true;
                 boatLocation = true; //boat is at Molokai
                 boatCounter -= 2;
-                sleeper.wakeAll();
+                sleeper.wakeAll(); 
                 break;
             } else {
                 sleeper.wakeAll();
@@ -137,8 +140,10 @@ public class Boat
         mainLock.acquire();
         boolean childOnMolokai = false;
 
+        //bunch of if statements for different cases
+        //boatLocation = true = at Molokai, if false = not at Molokai
         while(true) {
-            if (!boatLocation && !childOnMolokai && boatCounter < 2 && (childrenAtOahu > 1 || boatCounter == 1)) { //
+            if (!boatLocation && !childOnMolokai && boatCounter < 2 && (childrenAtOahu > 1 || boatCounter == 1)) { 
                 boatCounter++;
                 childrenAtOahu--;
 
@@ -150,6 +155,7 @@ public class Boat
                 } else { // passenger gets on
                     bg.ChildRideToMolokai();
                 }
+                //move the boat with passengers:
                 boatLocation = true;
                 childOnMolokai = true;
                 boatCounter--;
@@ -175,7 +181,7 @@ public class Boat
                 bg.ChildRowToOahu();
                 boatCounter--;
                 sleeper.wakeAll();
-            } else if (adultsAtOahu + childrenAtOahu == 0) {
+            } else if (adultsAtOahu + childrenAtOahu == 0) { //no passengers
                 sleeper.wakeAll();
                 finished = true;
                 break;
