@@ -1,5 +1,8 @@
 package nachos.threads;
 
+// import for priority queue
+import java.util.PriorityQueue;
+
 import nachos.machine.*;
 
 /**
@@ -14,10 +17,14 @@ public class Alarm {
      * <p><b>Note</b>: Nachos will not function correctly with more than one
      * alarm.
      */
+
+    // priorityQueue to keep threads organized based off waketimes
+    public PriorityQueue<ThreadWithTime> PQ = new PriorityQueue<ThreadWithTime>();
+
     public Alarm() {
-	Machine.timer().setInterruptHandler(new Runnable() {
-		public void run() { timerInterrupt(); }
-	    });
+        Machine.timer().setInterruptHandler(new Runnable() {
+            public void run() { timerInterrupt(); }
+        });
     }
 
     /**
@@ -27,7 +34,18 @@ public class Alarm {
      * that should be run.
      */
     public void timerInterrupt() {
-	KThread.currentThread().yield();
+        //KThread.currentThread().yield();
+
+        while (PQ.peek() != null && PQ.peek().getWaitTime() <= Machine.timer().getTime()) {
+            // removes newly woken thread from priority queue
+            // wakes up threads with past wake times and puts them in execution
+            PQ.remove().getThread().ready();
+
+        }
+        // allows for newly woken threads to execute
+        KThread.yield();
+
+
     }
 
     /**
@@ -45,9 +63,23 @@ public class Alarm {
      * @see	nachos.machine.Timer#getTime()
      */
     public void waitUntil(long x) {
-	// for now, cheat just to get something working (busy waiting is bad)
-	long wakeTime = Machine.timer().getTime() + x;
+        // for now, cheat just to get something working (busy waiting is bad)
+        long wakeTime = Machine.timer().getTime() + x;
+		/*
 	while (wakeTime > Machine.timer().getTime())
 	    KThread.yield();
+		 */
+        // create new ThreadWithTime object
+        ThreadWithTime twt = new ThreadWithTime(KThread.currentThread(), wakeTime);
+
+        Machine.interrupt().disable();
+
+        //add ThreadWithTime object to Priority Queue
+        PQ.add(twt);
+
+        //put current thread to sleep
+        KThread.sleep();
+
+        Machine.interrupt().enable();
     }
 }
