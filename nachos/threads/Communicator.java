@@ -12,15 +12,25 @@ import java.util.Queue;
  * be paired off at this point.
  */
 public class Communicator {
+    private Lock comLock;      // lock
+    private int message;   // word to be spoken
+
+    private boolean messageReady;   // check if word is ready
+
+    //conditions for speaking/listening/when they should connect
+    private Condition2 okToSpeak;
+    private Condition2 okToListen;
+    private Condition2 okToConnect;
     /**
      * Allocate a new communicator.
      */
     public Communicator() {
-        lock = new Lock();
-        wordReady = false;
-        okToSpeak = new Condition2(lock);
-        okToListen = new Condition2(lock);
-        okToConnect = new Condition2(lock);
+        comLock = new Lock();
+        message = 0;
+        messageReady = false;
+        okToSpeak = new Condition2(comLock);
+        okToListen = new Condition2(comLock);
+        okToConnect = new Condition2(comLock);
     }
 
     /**
@@ -34,23 +44,25 @@ public class Communicator {
      * @param	word	the integer to transfer.
      */
     public void speak(int word) {
-        lock.acquire();
+    	//acquire lock, subsequently sleep other threads
+        comLock.acquire();
 
-        // while a word is already ready
-        while(wordReady) {
+        // sleep speaking condition while message is ready
+        while(messageReady) {
             okToSpeak.sleep();
         }
 
-        // set the word to be spoken
-        this.word = word;
-
-        wordReady = true;
+        // store word as message
+        this.message = word;
+        
+        //set messageReady flag to true;
+        messageReady = true;
 
         // wake sleeping listener
         okToListen.wake();
         okToConnect.sleep();
 
-        lock.release();
+        comLock.release();
     }
 
     /**
@@ -60,31 +72,25 @@ public class Communicator {
      * @return	the integer transferred.
      */
     public int listen() {
-        lock.acquire();
+    	//acquire lock
+        comLock.acquire();
 
-        // while a word is not ready to be heard
-        while(!wordReady) {
+        // sleep listening while message is not ready
+        while(!messageReady) {
             okToListen.sleep();
         }
+        
+        //message is set between while loop and setting messageReady back to false
 
-        // heard word, so set wordReady back to false
-        wordReady = false;
+        messageReady = false;
 
         // wake a sleeping speaker
         okToSpeak.wake();
         okToConnect.wake();
 
-        lock.release();
+        comLock.release();
 
-	    return word;
+	    return message;
     }
 
-    private Lock lock;      // lock
-    private int word = 0;   // word to be spoken
-
-    private boolean wordReady;   // check if word is ready
-
-    private Condition2 okToSpeak;
-    private Condition2 okToListen;
-    private Condition2 okToConnect;
 }

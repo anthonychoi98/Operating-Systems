@@ -454,9 +454,9 @@ public class KThread {
 	th1.join();
 	//System.out.println("forked thread 1");
 	
-	Communicator comm = new Communicator();
-	comm.speak(990);
-	System.out.println(comm.listen());
+	Communicator com = new Communicator();
+	com.speak(29);
+	System.out.println(com.listen());
 	
 	
 	//new KThread(new PingTest(1)).setName("forked thread").fork();
