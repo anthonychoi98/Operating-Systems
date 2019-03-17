@@ -12,88 +12,85 @@ import java.util.Queue;
  * be paired off at this point.
  */
 public class Communicator {
-    private Lock comLock;      // communicator lock
-    private int message;   // word to be returned
+	private Lock comLock;      // lock
+	private int message;   // word to be spoken
 
-    private boolean messageReady;   // check if message is ready
-    private boolean okToConnect;
+	private boolean messageReady;   // check if word is ready
 
-    //conditions for speaking/listening/when they should connect
-    private Condition2 speakCondition;
-    private Condition2 listenCondition;
-    /**
-     * Allocate a new communicator.
-     */
-    public Communicator() {
-        comLock = new Lock();
-        message = 0;
-        messageReady = false;
-        okToConnect = false;
-        speakCondition = new Condition2(comLock);
-        listenCondition = new Condition2(comLock);
-    }
+	//conditions for speaking/listening/when they should connect
+	private Condition2 okToSpeak;
+	private Condition2 okToListen;
+	private Condition2 okToConnect;
+	/**
+	 * Allocate a new communicator.
+	 */
+	public Communicator() {
+		comLock = new Lock();
+		message = 0;
+		messageReady = false;
+		okToSpeak = new Condition2(comLock);
+		okToListen = new Condition2(comLock);
+		okToConnect = new Condition2(comLock);
+	}
 
-    /**
-     * Wait for a thread to listen through this communicator, and then transfer
-     * <i>word</i> to the listener.
-     *
-     * <p>
-     * Does not return until this thread is paired up with a listening thread.
-     * Exactly one listener should receive <i>word</i>.
-     *
-     * @param	word	the integer to transfer.
-     */
-    public void speak(int word) {
-    	//acquire lock, subsequently sleep other threads on ready queue
-        comLock.acquire();
+	/**
+	 * Wait for a thread to listen through this communicator, and then transfer
+	 * <i>word</i> to the listener.
+	 *
+	 * <p>
+	 * Does not return until this thread is paired up with a listening thread.
+	 * Exactly one listener should receive <i>word</i>.
+	 *
+	 * @param	word	the integer to transfer.
+	 */
+	public void speak(int word) {
+		//acquire lock, subsequently sleep other threads
+		comLock.acquire();
 
-        // sleep speaking condition while message is ready
-        while(messageReady) {
-            speakCondition.sleep();
-        }
+		// sleep speaking condition while message is ready
+		while(messageReady) {
+			okToSpeak.sleep();
+		}
 
-        // store word as message
-        this.message = word;
-       
-        //set messageReady flag to true;
-        messageReady = true;
+		// store word as message
+		this.message = word;
 
-        // wake sleeping listener
-        listenCondition.wake();
-        
-        //not ok to connect after listeners listen
-        okToConnect = false;
+		//set messageReady flag to true;
+		messageReady = true;
 
-        //release lock
-        comLock.release();
-    }
+		// wake sleeping listener
+		okToListen.wake();
+		okToConnect.sleep();
 
-    /**
-     * Wait for a thread to speak through this communicator, and then return
-     * the <i>word</i> that thread passed to <tt>speak()</tt>.
-     *
-     * @return	the integer transferred.
-     */
-    public int listen() {
-    	//acquire lock
-        comLock.acquire();
-        
-        // sleep listening while message is not ready
-        while(!messageReady) {
-            listenCondition.sleep();
-        }
-        
-        //message is set between while loop and setting messageReady back to false
-        messageReady = false;
-        
-        // wake a sleeping speaker and set okToconnect as true
-        speakCondition.wake();
-        okToConnect = true;
-        
-        comLock.release();
-        
-        //return message from speaker
-	    return message;
-    }
+		comLock.release();
+	}
+
+	/**
+	 * Wait for a thread to speak through this communicator, and then return
+	 * the <i>word</i> that thread passed to <tt>speak()</tt>.
+	 *
+	 * @return	the integer transferred.
+	 */
+	public int listen() {
+		//acquire lock
+		comLock.acquire();
+
+		// sleep listening while message is not ready
+		while(!messageReady) {
+			okToListen.sleep();
+		}
+
+		//message is set between while loop and setting messageReady back to false
+
+		messageReady = false;
+
+		// wake a sleeping speaker
+		okToSpeak.wake();
+		okToConnect.wake();
+
+		comLock.release();
+
+		return message;
+	}
 
 }
