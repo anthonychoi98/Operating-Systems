@@ -1,24 +1,36 @@
 package nachos.threads;
 
 import nachos.machine.*;
+import java.util.LinkedList;
+import java.util.Queue;
 
 /**
  * A <i>communicator</i> allows threads to synchronously exchange 32-bit
- * messages. Multiple threads can be waiting to <i>speak</i>,
- * and multiple threads can be waiting to <i>listen</i>. But there should never
- * be a time when both a speaker and a listener are waiting, because the two
- * threads can be paired off at this point.
+ * messages. Multiple threads can be waiting to <i>speak</i>, and multiple
+ * threads can be waiting to <i>listen</i>. But there should never be a time
+ * when both a speaker and a listener are waiting, because the two threads can
+ * be paired off at this point.
  */
 public class Communicator {
+    private Lock comLock;      // communicator lock
+    private int message;   // word to be returned
+
+    private boolean messageReady;   // check if message is ready
+    private boolean okToConnect;
+
+    //conditions for speaking/listening/when they should connect
+    private Condition2 speakCondition;
+    private Condition2 listenCondition;
     /**
      * Allocate a new communicator.
      */
     public Communicator() {
-        lock = new Lock();
-        wordReady = false;
-        okToSpeak = new Condition2(lock);
-        okToListen = new Condition2(lock);
-        okToConnect = new Condition2(lock);
+        comLock = new Lock();
+        message = 0;
+        messageReady = false;
+        okToConnect = false;
+        speakCondition = new Condition2(comLock);
+        listenCondition = new Condition2(comLock);
     }
 
     /**
@@ -32,23 +44,28 @@ public class Communicator {
      * @param	word	the integer to transfer.
      */
     public void speak(int word) {
-        lock.acquire();
+    	//acquire lock, subsequently sleep other threads on ready queue
+        comLock.acquire();
 
-        // while a word is already ready
-        while(wordReady) {
-            okToSpeak.sleep();
+        // sleep speaking condition while message is ready
+        while(messageReady) {
+            speakCondition.sleep();
         }
 
-        // set the word to be spoken
-        this.word = word;
-
-        wordReady = true;
+        // store word as message
+        this.message = word;
+       
+        //set messageReady flag to true;
+        messageReady = true;
 
         // wake sleeping listener
-        okToListen.wake();
-        okToConnect.sleep();
+        listenCondition.wake();
+        
+        //not ok to connect after listeners listen
+        okToConnect = false;
 
-        lock.release();
+        //release lock
+        comLock.release();
     }
 
     /**
@@ -58,31 +75,25 @@ public class Communicator {
      * @return	the integer transferred.
      */
     public int listen() {
-        lock.acquire();
-
-        // while a word is not ready to be heard
-        while(!wordReady) {
-            okToListen.sleep();
+    	//acquire lock
+        comLock.acquire();
+        
+        // sleep listening while message is not ready
+        while(!messageReady) {
+            listenCondition.sleep();
         }
-
-        // heard word, so set wordReady back to false
-        wordReady = false;
-
-        // wake a sleeping speaker
-        okToSpeak.wake();
-        okToConnect.wake();
-
-        lock.release();
-
-	    return word;
+        
+        //message is set between while loop and setting messageReady back to false
+        messageReady = false;
+        
+        // wake a sleeping speaker and set okToconnect as true
+        speakCondition.wake();
+        okToConnect = true;
+        
+        comLock.release();
+        
+        //return message from speaker
+	    return message;
     }
 
-    private Lock lock;      // lock
-    private int word = 0;   // word to be spoken
-
-    private boolean wordReady;   // check if word is ready
-
-    private Condition2 okToSpeak;
-    private Condition2 okToListen;
-    private Condition2 okToConnect;
 }
