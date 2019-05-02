@@ -13,24 +13,41 @@ import java.util.Queue;
  */
 public class Communicator {
     private Lock comLock;      // communicator lock
+<<<<<<< HEAD
     private int message;   // word to be returned
 
     private boolean messageReady;   // check if message is ready
     private boolean okToConnect;
+=======
+    private int message;   // integer to be returned
+
+    private boolean messageReady;   // flag to check if message is ready
+>>>>>>> f856d2298829f7d377971f35afe9255b90d905cf
 
     //conditions for speaking/listening/when they should connect
     private Condition2 speakCondition;
     private Condition2 listenCondition;
+<<<<<<< HEAD
+=======
+    private Condition2 connectCondition;
+>>>>>>> f856d2298829f7d377971f35afe9255b90d905cf
     /**
      * Allocate a new communicator.
      */
     public Communicator() {
         comLock = new Lock();
+<<<<<<< HEAD
         message = 0;
         messageReady = false;
         okToConnect = false;
         speakCondition = new Condition2(comLock);
         listenCondition = new Condition2(comLock);
+=======
+        messageReady = false;
+        speakCondition = new Condition2(comLock);
+        listenCondition = new Condition2(comLock);
+        connectCondition = new Condition2(comLock);
+>>>>>>> f856d2298829f7d377971f35afe9255b90d905cf
     }
 
     /**
@@ -53,16 +70,26 @@ public class Communicator {
         }
 
         // store word as message
+<<<<<<< HEAD
         this.message = word;
        
         //set messageReady flag to true;
+=======
+        message = word;
+       
+        //set messageReady flag to true
+>>>>>>> f856d2298829f7d377971f35afe9255b90d905cf
         messageReady = true;
 
         // wake sleeping listener
         listenCondition.wake();
         
         //not ok to connect after listeners listen
+<<<<<<< HEAD
         okToConnect = false;
+=======
+        connectCondition.sleep();
+>>>>>>> f856d2298829f7d377971f35afe9255b90d905cf
 
         //release lock
         comLock.release();
@@ -83,12 +110,21 @@ public class Communicator {
             listenCondition.sleep();
         }
         
+<<<<<<< HEAD
         //message is set between while loop and setting messageReady back to false
         messageReady = false;
         
         // wake a sleeping speaker and set okToconnect as true
         speakCondition.wake();
         okToConnect = true;
+=======
+        //set messageReady back to false
+        messageReady = false;
+        
+        // wake a sleeping speaker and pair(connect)
+        speakCondition.wake();
+        connectCondition.wake();
+>>>>>>> f856d2298829f7d377971f35afe9255b90d905cf
         
         comLock.release();
         

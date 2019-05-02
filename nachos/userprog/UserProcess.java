@@ -1,10 +1,18 @@
 package nachos.userprog;
 
 import nachos.machine.*;
+
 import nachos.threads.*;
 import nachos.userprog.*;
 
 import java.io.EOFException;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Encapsulates the state of a user process that is not contained in its
@@ -18,15 +26,48 @@ import java.io.EOFException;
  * @see	nachos.vm.VMProcess
  * @see	nachos.network.NetProcess
  */
+
 public class UserProcess {
     /**
      * Allocate a new process.
      */
+	 private static final int ROOT = 1;
+     private static int unique = ROOT;
+     private int process_id;
+     
+     private UThread thread;
+     private HashMap<Integer, childProcess> map;
+     private childProcess myChildProcess;
+     
+     class childProcess{
+             UserProcess child;
+             int status;
+
+             childProcess(UserProcess process){
+                     this.child=process;
+                     this.status=-999;
+             }
+     }
+     
+     
+     
     public UserProcess() {
+    
+    map=new HashMap<Integer, childProcess>();
+    	
 	int numPhysPages = Machine.processor().getNumPhysPages();
 	pageTable = new TranslationEntry[numPhysPages];
 	for (int i=0; i<numPhysPages; i++)
 	    pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
+    
+    this.process_id = unique;
+    unique++;
+    
+    openfiles = new HashMap<Integer, OpenFile>();
+	available_descriptors = new ArrayList<Integer>(Arrays.asList(2,3,4,5,6,7,8,9,10,11,12,13,14,15));
+	openfiles.put(0, UserKernel.console.openForReading());
+	openfiles.put(1, UserKernel.console.openForWriting());
+    
     }
     
     /**
@@ -133,14 +174,31 @@ public class UserProcess {
 
 	byte[] memory = Machine.processor().getMemory();
 	
-	// for now, just assume that virtual addresses equal physical addresses
-	if (vaddr < 0 || vaddr >= memory.length)
-	    return 0;
-
-	int amount = Math.min(length, memory.length-vaddr);
-	System.arraycopy(memory, vaddr, data, offset, amount);
-
-	return amount;
+	int transfer = 0;
+    while (length > 0 && offset < data.length) {
+    	int VP = vaddr/1024;
+    	int addressOffset = vaddr % 1024;
+    	
+    	if (VP >= pageTable.length || VP < 0) {
+    		break;
+    	}
+    	TranslationEntry pte = pageTable[VP];
+    	if (!pte.valid) {
+    		break;
+    	}
+    	pte.used = true;
+    	
+    	int physicalPage = pte.ppn;
+    	int physicalAddress = physicalPage * 1024 + addressOffset;
+    	
+    	int amount = Math.min(data.length-offset, Math.min(length, 1024-addressOffset));
+    	System.arraycopy(memory, physicalAddress, data, offset, amount);
+    	offset += amount;
+    	length -= amount;
+    	vaddr += amount;
+    	transfer += amount;
+    }
+	return transfer;
     }
 
     /**
@@ -446,4 +504,8 @@ public class UserProcess {
 	
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
+    private HashMap<Integer, OpenFile> openfiles;
+    private List<Integer> available_descriptors;
+    
+    
 }

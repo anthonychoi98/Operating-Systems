@@ -2,9 +2,7 @@
 package nachos.threads;
 
 import nachos.machine.*;
-import java.util.LinkedList; 
-import java.util.Queue; 
-
+import java.util.LinkedList;
 /**
  * A KThread is a thread that can be used to execute Nachos kernel code. Nachos
  * allows multiple threads to run concurrently.
@@ -284,6 +282,7 @@ public class KThread {
     	Lib.debug(dbgThread, "Joining to thread: " + toString());
     	Lib.assertTrue(this != currentThread);
     	Lib.debug(dbgThread, "jDEBUG");
+<<<<<<< HEAD
 //    	Lib.debug(dbgThread, String.valueOf(Machine.interrupt().disabled()));
     	// sets machine state
     	boolean state = Machine.interrupt().disable();
@@ -319,6 +318,21 @@ public class KThread {
 //    		System.out.println("here");
 //    		Machine.interrupt().restore(state);
 
+=======
+    	// disables machine interrupts to ensure atomicity
+    	boolean state = Machine.interrupt().disable();
+    	// checks if the thread has finished
+		if (this.status == statusFinished){
+			//if finished, does nothing
+			return;
+		}
+		// ensures access to thread
+		this.joinQueue.waitForAccess(currentThread);
+		// yields current thread
+		currentThread.yield();
+		// restores machine interrupts
+		Machine.interrupt().restore(state);
+>>>>>>> f856d2298829f7d377971f35afe9255b90d905cf
     }
 
     /**
@@ -449,9 +463,9 @@ public class KThread {
 	th1.setName("forked thread 1");
 	th1.fork();
 	new PingTest(0).run();
-	//System.out.println("before joined forked thread 1 once");
 	th1.join();
 	th1.join();
+<<<<<<< HEAD
 	//System.out.println("forked thread 1");
 	
 	Communicator com = new Communicator();
@@ -461,6 +475,10 @@ public class KThread {
 	
 	//new KThread(new PingTest(1)).setName("forked thread").fork();
 	//new PingTest(0).run();
+=======
+	th1.join();
+	th1.join();
+>>>>>>> f856d2298829f7d377971f35afe9255b90d905cf
     }
 
     private static final char dbgThread = 't';
@@ -495,7 +513,10 @@ public class KThread {
     private int id = numCreated++;
     /** Number of times the KThread constructor was called. */
     private static int numCreated = 0;
+<<<<<<< HEAD
     LinkedList<KThread> joinQueueList = new LinkedList<KThread>();
+=======
+>>>>>>> f856d2298829f7d377971f35afe9255b90d905cf
 	private static ThreadQueue joinQueue = ThreadedKernel.scheduler.newThreadQueue(true);
 	private static ThreadQueue readyQueue = null;
     private static KThread currentThread = null;
