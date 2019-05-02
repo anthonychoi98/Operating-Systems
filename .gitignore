@@ -18,6 +18,12 @@ target/
 
 # Compiled class file
 *.class
+*.c
+*.o
+*.h
+*.coff
+
+test/
 
 # Log file
 *.log
