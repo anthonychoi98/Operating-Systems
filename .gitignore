@@ -8,6 +8,9 @@
 *.iml
 *.iws
 
+# Coruvars
+compile/
+
 
 # Mac
 .DS_Store
