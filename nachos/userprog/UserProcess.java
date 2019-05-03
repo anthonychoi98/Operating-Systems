@@ -391,13 +391,163 @@ public class UserProcess {
 	switch (syscall) {
 	case syscallHalt:
 	    return handleHalt();
+	 case syscallExit:
+         return Exit();
 
+     case syscallExec:
+         return Exec();
+
+     case syscallJoin:
+         return Join();
+
+     case syscallCreate: 
+         return Create(a0);
+
+     case syscallOpen: 
+         return Open(a0);
+
+     case syscallRead:
+         return Read(a0, a1, a2);
+
+     case syscallWrite: 
+         return Write(a0, a1, a2);
+
+     case syscallClose: 
+         return Close(a0);
+
+     case syscallUnlink: 
+         return Unlink(a0);
 
 	default:
 	    Lib.debug(dbgProcess, "Unknown syscall " + syscall);
 	    Lib.assertNotReached("Unknown system call!");
 	}
 	return 0;
+    }
+    
+    private int Join() {
+        return 0;
+    }
+
+    private int Exec() {
+        return 0;
+    }
+
+    private int Exit() {
+        return 0;
+    }
+
+    private int Unlink(int bufaddr) {
+        String file = readVirtualMemoryString(bufaddr, 256);
+        if (file == null || file.length() == 0)
+            return -1;
+        boolean isC = UserKernel.fileSystem.remove(file);
+        if (isC) {
+            return -1;
+        }
+        return 0;
+    }
+
+    private int Close(int fileD) {
+        if ((fileD < 0 || fileD > 15) || (openFileArr[fileD] == null || openFileArr[fileD].length() < 0))
+            return -1;
+        openFileArr[fileD].close();
+        if (openFileArr[fileD].length() == -1) {
+            openFileArr[fileD] = null;
+            return 0;
+        }
+        return -1;
+    }
+
+    private int Write(int fileD, int bufaddr, int bufnum) {
+        if (bufnum < 0 || (fileD < 0 || fileD > 15) || openFileArr[fileD] == null)
+            return -1;
+        byte[] tempBuf = new byte[bufnum];
+        int iRead = readVirtualMemory(bufaddr, tempBuf);
+        if (iRead < 0)
+            return -1;
+        int rVal = 0;
+        int i; // Number of times write() gets stuck
+        for (i = 0; rVal < bufnum && i < 3;){
+            int doneWrite = openFileArr[fileD].write(tempBuf, rVal, bufnum - rVal);
+            if (doneWrite != -1)
+                rVal += doneWrite;
+            else
+                return -1;
+            if (doneWrite == 0) {
+                i++;
+            }
+        }
+        return rVal;
+    }
+
+    private int Read(int fileD, int bufaddr, int bufnum) {
+        if (bufnum < 0 || (fileD < 0 || fileD > 15) || openFileArr[fileD] == null)
+            return -1;
+        byte[] tempBuf = new byte[bufnum];
+        int i;
+        for (i = 0; i< bufnum;) {
+            int isRead = openFileArr[fileD].read(tempBuf, i, bufnum - i);
+            if (isRead == -1)
+                return -1;
+            i += isRead;
+        }
+        if (writeVirtualMemory(bufaddr, tempBuf, 0, i) != i)
+            return -1;
+        return i;
+    }
+
+    private int Open(int address) {
+        int fileD = -1; // So it throws -1 (error) if oFile is non-existent
+        // Find available openFile slot
+        for (int i = 0; i < openFileArr.length; i++) {
+            if (openFileArr[i] == null) {
+                fileD = i;
+            }
+        }
+        if (fileD == -1)
+            return -1;
+
+        String file = readVirtualMemoryString(address, 256); // Max length is 256 bytes
+        if (file == null)
+            return -1;
+
+        OpenFile oFile = ThreadedKernel.fileSystem.open(file, false);
+        if (oFile == null) {
+            return -1;
+        }
+
+        openFileArr[fileD] = oFile;
+
+
+        return fileD;
+    }
+
+    private int Create(int address) {
+        int fileD = -1; // So it throws -1 (error) if oFile is non-existent
+        // Find available openFile slot
+        for (int i = 0; i < openFileArr.length; i++) {
+            if (openFileArr[i] == null) {
+                fileD = i;
+            }
+        }
+        if (fileD == -1)
+            return -1;
+        
+        String file = readVirtualMemoryString(address, 256); // Max length is 256 bytes
+        if (file == null)
+            return -1;
+        
+        OpenFile oFile = ThreadedKernel.fileSystem.open(file, true);
+        if (oFile == null) {
+            return -1;
+        }
+
+        openFileArr[fileD] = oFile;
+
+        //System.out.println("Creat complete!");
+        return fileD;
+
     }
 
     /**
@@ -443,7 +593,8 @@ public class UserProcess {
     
     private int initialPC, initialSP;
     private int argc, argv;
-	
+    
+    private OpenFile [] openFileArr; // An array that keeps track of active file threads
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
 }
