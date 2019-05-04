@@ -4,10 +4,53 @@ import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+
 /**
  * A kernel that can support multiple user processes.
  */
 public class UserKernel extends ThreadedKernel {
+	
+	static LinkedList<Integer> freePages;
+	static ArrayList<Boolean> pageFree;
+	
+	static {
+		initPages();
+	}
+	
+	public static void initPages() {
+		freePages = new LinkedList<Integer>();
+		pageFree = new ArrayList<Boolean>();
+		for (int i=0; i<Machine.processor().getNumPhysPages(); i++) {
+			freePages.add(i);
+			pageFree.add(false);
+		}
+	}
+	
+	public static int allocatePage() {
+		Machine.interrupt().disable();
+		
+		if (freePages.size() < 1) {
+			Machine.interrupt().enable();
+			return -1;
+		} else {
+			int pageNum = freePages.pop();
+			Lib.assertTrue(pageFree.get(pageNum) == false);
+			pageFree.set(pageNum, true);
+			Machine.interrupt().enable();
+			return pageNum;
+		}
+	}
+	
+	public static void deallocatePage(int pageNum) {
+		Machine.interrupt().disable();
+		Lib.assertTrue(pageFree.get(pageNum) == true);
+		pageFree.set(pageNum, false);
+		freePages.push(pageNum);
+		Machine.interrupt().enable();
+	}
+
     /**
      * Allocate a new user kernel.
      */
