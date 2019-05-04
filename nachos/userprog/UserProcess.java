@@ -1,8 +1,7 @@
 package nachos.userprog;
 
 import nachos.machine.*;
-import nachos.threads.*;
-import nachos.userprog.*;
+import nachos.threads.ThreadedKernel;
 
 import java.io.EOFException;
 
@@ -23,10 +22,18 @@ public class UserProcess {
      * Allocate a new process.
      */
     public UserProcess() {
-	int numPhysPages = Machine.processor().getNumPhysPages();
-	pageTable = new TranslationEntry[numPhysPages];
-	for (int i=0; i<numPhysPages; i++)
-	    pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
+
+    	// allocates 16 files for the file table.
+		fileTable = new OpenFile[16];
+
+
+		fileTable[0] = UserKernel.console.openForReading();
+		fileTable[1] = UserKernel.console.openForWriting();
+
+		int numPhysPages = Machine.processor().getNumPhysPages();
+		pageTable = new TranslationEntry[numPhysPages];
+		for (int i=0; i<numPhysPages; i++)
+			pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
     }
     
     /**
@@ -348,7 +355,6 @@ public class UserProcess {
 
 
 
-
 //  ____            _     _
 // |  _ \ __ _ _ __| |_  / |
 // | |_) / _` | '__| __| | |
@@ -359,7 +365,7 @@ public class UserProcess {
 
 	public int creat(int name){
 		// function doesn't take argument because it's only ever used for fileTable purposes.
-		int fileDescriptorIndex = findFreeFileDescriptor();
+		int fileDescriptor = findFreeFileDescriptor();
 
 		// adds file to virtual memory file table
 		String filename = readVirtualMemoryString(name, maxbyte);
@@ -368,7 +374,7 @@ public class UserProcess {
 		OpenFile file = ThreadedKernel.fileSystem.open(filename, true);
 
 		// value is -1 if no index found
-		if (fileDescriptorIndex == -1){
+		if (fileDescriptor == -1){
 			return -1;
 		}
 
@@ -383,19 +389,19 @@ public class UserProcess {
 		}
 
 		// all checks passed, continuing
-		fileTable[fileDescriptorIndex] = file;
-		return fileDescriptorIndex;
+		fileTable[fileDescriptor] = file;
+		return fileDescriptor;
 	}
 
 	private int open(int name){
 		// same lines as creat() except
 		// this time we pass false for ThreadedKernel.fileSystem.open as
-		int fileDescriptorIndex = findFreeFileDescriptor();
+		int fileDescriptor = findFreeFileDescriptor();
 		String filename = readVirtualMemoryString(name, maxbyte);
 		OpenFile file = ThreadedKernel.fileSystem.open(filename, false);
 
 		// if there is no available index, return -1
-		if (fileDescriptorIndex == -1){
+		if (fileDescriptor == -1){
 			return -1;
 		}
 
@@ -409,9 +415,9 @@ public class UserProcess {
 			return -1;
 		}
 
-		// open() and creat() are very simliar
-		fileTable[fileDescriptorIndex] = file;
-		return fileDescriptorIndex;
+		// open() and creat() are very similar
+		fileTable[fileDescriptor] = file;
+		return fileDescriptor;
 	}
 
 //	private int read(int fileDescriptor, int buffer, int size){
@@ -599,6 +605,18 @@ public class UserProcess {
 	switch (syscall) {
 	case syscallHalt:
 	    return handleHalt();
+    case syscallCreate:
+        return creat(a0);
+    case syscallOpen:
+        return open(a0);
+//    case syscallRead:
+//        return read(a0, a1, a2);
+    case syscallWrite:
+        return write(a0, a1, a2);
+    case syscallClose:
+        return close(a0);
+    case syscallUnlink:
+        return unlink(a0);
 
 
 	default:
