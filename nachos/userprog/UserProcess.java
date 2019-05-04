@@ -152,28 +152,39 @@ public class UserProcess {
 		byte[] memory = Machine.processor().getMemory();
 
 		int transfer = 0;
+		int VP = vaddr/Processor.pageSize;
+		int addressOffset = vaddr % Processor.pageSize;
+		
+		
 		while (length > 0 && offset < data.length) {
-			int VP = vaddr/1024;
-			int addressOffset = vaddr % 1024;
-
+			//get virtual page and address offset
+//			int VP = vaddr/Processor.pageSize;
+//			int addressOffset = vaddr % Processor.pageSize;
+			
+			//check that virtual page is valid
 			if (VP >= pageTable.length || VP < 0) {
 				break;
 			}
+			//create page table entry
 			TranslationEntry pageTableEntry = pageTable[VP];
+			//check that page table entry is valid
 			if (!pageTableEntry.valid) {
 				break;
 			}
+			//mark page table entry as used
 			pageTableEntry.used = true;
-
+			//get physical page and address to read virtual memory
 			int physicalPage = pageTableEntry.ppn;
-			int physicalAddress = physicalPage * 1024 + addressOffset;
-
-			int amount = Math.min(data.length-offset, Math.min(length, 1024-addressOffset));
-			System.arraycopy(memory, physicalAddress, data, offset, amount);
+			int physicalAddress = physicalPage * Processor.pageSize + addressOffset;
+			int amount = Math.min(data.length-offset, Math.min(length, Processor.pageSize-addressOffset));
+			System.arraycopy(data, offset, memory, physicalAddress, amount);
 			offset += amount;
 			length -= amount;
 			vaddr += amount;
 			transfer += amount;
+			
+			addressOffset = vaddr % Processor.pageSize;
+			VP = vaddr/Processor.pageSize;
 		}
 		return transfer;
 	}
@@ -213,8 +224,8 @@ public class UserProcess {
 
 		int transfer = 0;
 		while (length > 0 && offset < data.length) {
-			int addressOffset = vaddr % 1024;
-			int VP = vaddr / 1024;
+			int addressOffset = vaddr % Processor.pageSize;
+			int VP = vaddr / Processor.pageSize;
 
 			if (VP >= pageTable.length || VP < 0) {
 				break;
@@ -225,12 +236,13 @@ public class UserProcess {
 				break;
 			}
 			pageTableEntry.used = true;
-			pageTableEntry.dirty = true;
+			//pageTableEntry.dirty = true;
 
 			int physicalPage = pageTableEntry.ppn;
-			int physicalAddress = physicalPage * 1024 + addressOffset;
-
+			int physicalAddress = physicalPage * Processor.pageSize + addressOffset;
+			//amount is minimum byte length to transfer
 			int amount = Math.min(data.length-offset, Math.min(length, 1024-addressOffset));
+			//update
 			System.arraycopy(data, offset, memory, physicalAddress, amount);
 			offset += amount;
 			length -= amount;
