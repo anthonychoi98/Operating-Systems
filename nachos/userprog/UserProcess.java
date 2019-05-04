@@ -817,6 +817,24 @@ public class UserProcess {
 		switch (syscall) {
 		case syscallHalt:
 			return handleHalt();
+//		case syscallExit:
+//			exitFile(a0);
+//		case syscallExec:
+//			return executeFile(a0, a1, a2);
+//		case syscallJoin:
+//			return joinFile(a0, a1);
+		case syscallCreate:
+			return creat(a0);
+		case syscallOpen:
+			return open(a0);
+		case syscallRead:
+			return read(a0, a1, a2);
+		case syscallWrite:
+			return write(a0, a1, a2);
+		case syscallClose:
+			return close(a0);
+		case syscallUnlink:
+			return unlink(a0);
 
 
 		default:
