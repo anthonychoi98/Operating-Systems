@@ -10,7 +10,6 @@ import java.io.EOFException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -31,43 +30,9 @@ public class UserProcess {
     /**
      * Allocate a new process.
      */
-	 private static final int ROOT = 1;
-     private static int unique = ROOT;
-     private int process_id;
-     
-     private UThread thread;
-     private HashMap<Integer, childProcess> map;
-     private childProcess myChildProcess;
-     
-     class childProcess{
-             UserProcess child;
-             int status;
-
-             childProcess(UserProcess process){
-                     this.child=process;
-                     this.status=-999;
-             }
-     }
-     
      
      
     public UserProcess() {
-    
-    map=new HashMap<Integer, childProcess>();
-    	
-	int numPhysPages = Machine.processor().getNumPhysPages();
-	pageTable = new TranslationEntry[numPhysPages];
-	for (int i=0; i<numPhysPages; i++)
-	    pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
-    
-    this.process_id = unique;
-    unique++;
-    
-    openfiles = new HashMap<Integer, OpenFile>();
-	available_descriptors = new ArrayList<Integer>(Arrays.asList(2,3,4,5,6,7,8,9,10,11,12,13,14,15));
-	openfiles.put(0, UserKernel.console.openForReading());
-	openfiles.put(1, UserKernel.console.openForWriting());
-    
     }
     
     /**
@@ -148,7 +113,7 @@ public class UserProcess {
      *
      * @param	vaddr	the first byte of virtual memory to read.
      * @param	data	the array where the data will be stored.
-     * @return	the number of bytes successfully transferred.
+     * @return	the number of bytes successfully transfer.
      */
     public int readVirtualMemory(int vaddr, byte[] data) {
 	return readVirtualMemory(vaddr, data, 0, data.length);
@@ -166,7 +131,7 @@ public class UserProcess {
      * @param	offset	the first byte to write in the array.
      * @param	length	the number of bytes to transfer from virtual memory to
      *			the array.
-     * @return	the number of bytes successfully transferred.
+     * @return	the number of bytes successfully transfer.
      */
     public int readVirtualMemory(int vaddr, byte[] data, int offset,
 				 int length) {
@@ -182,13 +147,13 @@ public class UserProcess {
     	if (VP >= pageTable.length || VP < 0) {
     		break;
     	}
-    	TranslationEntry pte = pageTable[VP];
-    	if (!pte.valid) {
+    	TranslationEntry pageTableEntry = pageTable[VP];
+    	if (!pageTableEntry.valid) {
     		break;
     	}
-    	pte.used = true;
+    	pageTableEntry.used = true;
     	
-    	int physicalPage = pte.ppn;
+    	int physicalPage = pageTableEntry.ppn;
     	int physicalAddress = physicalPage * 1024 + addressOffset;
     	
     	int amount = Math.min(data.length-offset, Math.min(length, 1024-addressOffset));
@@ -208,7 +173,7 @@ public class UserProcess {
      *
      * @param	vaddr	the first byte of virtual memory to write.
      * @param	data	the array containing the data to transfer.
-     * @return	the number of bytes successfully transferred.
+     * @return	the number of bytes successfully transfer.
      */
     public int writeVirtualMemory(int vaddr, byte[] data) {
 	return writeVirtualMemory(vaddr, data, 0, data.length);
@@ -226,7 +191,7 @@ public class UserProcess {
      * @param	offset	the first byte to transfer from the array.
      * @param	length	the number of bytes to transfer from the array to
      *			virtual memory.
-     * @return	the number of bytes successfully transferred.
+     * @return	the number of bytes successfully transfer.
      */
     public int writeVirtualMemory(int vaddr, byte[] data, int offset,
 				  int length) {
@@ -234,14 +199,34 @@ public class UserProcess {
 
 	byte[] memory = Machine.processor().getMemory();
 	
-	// for now, just assume that virtual addresses equal physical addresses
-	if (vaddr < 0 || vaddr >= memory.length)
-	    return 0;
+	int transfer = 0;
+    while (length > 0 && offset < data.length) {
+    	int addressOffset = vaddr % 1024;
+    	int VP = vaddr / 1024;
+    	
+    	if (VP >= pageTable.length || VP < 0) {
+    		break;
+    	}
+    	
+    	TranslationEntry pageTableEntry = pageTable[VP];
+    	if (!pageTableEntry.valid || pageTableEntry.readOnly) {
+    		break;
+    	}
+    	pageTableEntry.used = true;
+    	pageTableEntry.dirty = true;
+    	
+    	int physicalPage = pageTableEntry.ppn;
+    	int physicalAddress = physicalPage * 1024 + addressOffset;
+    	
+    	int amount = Math.min(data.length-offset, Math.min(length, 1024-addressOffset));
+    	System.arraycopy(data, offset, memory, physicalAddress, amount);
+    	offset += amount;
+    	length -= amount;
+    	vaddr += amount;
+    	transfer += amount;
+    }
 
-	int amount = Math.min(length, memory.length-vaddr);
-	System.arraycopy(data, offset, memory, vaddr, amount);
-
-	return amount;
+	return transfer;
     }
 
     /**
@@ -346,18 +331,44 @@ public class UserProcess {
 	    return false;
 	}
 
+	
+	pageTable = new TranslationEntry[numPages];
+    
+    for (int i=0; i<numPages; i++) {
+    	int physPage = UserKernel.allocatePage();
+    	if (physPage < 0) {
+    		Lib.debug(dbgProcess, "\tunable to allocate pages; tried " + numPages + ", did " + i );
+    		for (int j=0; j<i; j++) {
+    			if (pageTable[j].valid) {
+    				UserKernel.deallocatePage(pageTable[j].ppn);
+    				pageTable[j].valid = false;
+    			}
+    		}
+    		coff.close();
+    		return false;
+    	}
+    	pageTable[i] = new TranslationEntry(
+    			i, physPage, true, false, false, false);
+    }
+	
+	
 	// load sections
 	for (int s=0; s<coff.getNumSections(); s++) {
 	    CoffSection section = coff.getSection(s);
 	    
 	    Lib.debug(dbgProcess, "\tinitializing " + section.getName()
 		      + " section (" + section.getLength() + " pages)");
+	    
 
 	    for (int i=0; i<section.getLength(); i++) {
-		int vpn = section.getFirstVPN()+i;
-
-		// for now, just assume virtual addresses=physical addresses
-		section.loadPage(i, vpn);
+			int vpn = section.getFirstVPN()+i;
+	
+			// for now, just assume virtual addresses=physical addresses
+			int ppn = pageTable[vpn].ppn;
+	        section.loadPage(i, ppn);
+		        if (section.isReadOnly()) {
+		        	pageTable[vpn].readOnly = true;
+			    }
 	    }
 	}
 	
@@ -368,6 +379,12 @@ public class UserProcess {
      * Release any resources allocated by <tt>loadSections()</tt>.
      */
     protected void unloadSections() {
+    	for (int i=0; i<pageTable.length; i++) {
+    		if (pageTable[i].valid) {
+    			UserKernel.deallocatePage(pageTable[i].ppn);
+    			pageTable[i].valid = false;
+    		}
+    	}
     }    
 
     /**
@@ -504,8 +521,5 @@ public class UserProcess {
 	
     private static final int pageSize = Processor.pageSize;
     private static final char dbgProcess = 'a';
-    private HashMap<Integer, OpenFile> openfiles;
-    private List<Integer> available_descriptors;
-    
     
 }
