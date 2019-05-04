@@ -52,16 +52,12 @@ public class UserProcess {
 	public UserProcess() {
 		map=new HashMap<Integer, childProcess>();
 
-
-		/**TASK 1 DECLARATIONS**/
-		map=new HashMap<Integer, childProcess>();
-
 		// allocates 16 files for the file table.
 		fileTable = new OpenFile[16];
+
+
 		fileTable[0] = UserKernel.console.openForReading();
 		fileTable[1] = UserKernel.console.openForWriting();
-		/**END OF TASK 1 DECLARATIONS**/
-
 
 		int numPhysPages = Machine.processor().getNumPhysPages();
 		pageTable = new TranslationEntry[numPhysPages];
@@ -618,13 +614,13 @@ public class UserProcess {
 	/**End of TASK3 **/
 
 
-
-	/**TASK 1 Implementation**/
 	//  ____            _     _
 	// |  _ \ __ _ _ __| |_  / |
 	// | |_) / _` | '__| __| | |
 	// |  __/ (_| | |  | |_  | |
 	// |_|   \__,_|_|   \__| |_|
+
+
 
 	public int creat(int name){
 		// function doesn't take argument because it's only ever used for fileTable purposes.
@@ -806,7 +802,6 @@ public class UserProcess {
 	}
 
 
-
 	// ____ ____ _  _ ___  ____ _  _ _ ____ _  _  ____ _  _ _  _ ____ ___ _ ____ _  _ ____
 	// |    |  | |\/| |__] |__| |\ | | |  | |\ |  |___ |  | |\ | |     |  | |  | |\ | [__
 	// |___ |__| |  | |    |  | | \| | |__| | \|  |    |__| | \| |___  |  | |__| | \| ___]
@@ -826,8 +821,6 @@ public class UserProcess {
 		// if there is no free file descriptor found, return -1
 		return -1;
 	}
-
-	/**END OF TASK 1 Implementation**/
 
 	private static final int
 	syscallHalt = 0,
@@ -963,8 +956,6 @@ public class UserProcess {
 	// |    |  | |\/| |__] |__| |\ | | |  | |\ |  |  | |__| |__/ | |__| |__] |    |___ [__
 	// |___ |__| |  | |    |  | | \| | |__| | \|   \/  |  | |  \ | |  | |__] |___ |___ ___]
 
-	/**TASK 1 DECLARATIONS**/
-
 	// defines max fileTable value
 	// TODO add better name
 	private static final int maxfileTableValue = 16;
@@ -972,8 +963,6 @@ public class UserProcess {
 	private static final int maxbyte = 256;
 	// I wonder if we could make this a vector for fun
 	private OpenFile[] fileTable;
-	/** END OF TASK 1**/
-
 
 
 }
