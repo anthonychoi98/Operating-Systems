@@ -630,35 +630,39 @@ public class UserProcess {
 		return fileDescriptor;
 	}
 
-//	private int read(int fileDescriptor, int buffer, int size){
-//		int readBytes = 0;
-//		byte[] byteBuff = new byte[size];
-//
-//		// checks for invalid fd
-//		if (fileDescriptor < 0 || fileDescriptor >= maxfileTableValue){
-//			return -1;
-//		}
-//
-//		// checks if entry exists in fileTable
-//		if (fileTable[fileDescriptor] == null) {
-//			return -1;
-//		}
-//
-//		// checks of size makes sense
-//		if (size < 0){
-//			return -1;
-//		}
-//
-//		// reads from the fileTable
-//		readBytes = fileTable[fileDescriptor].read();
-//		// writes to the virtual address space
-//		readBytes = writeVirtualMemory();
-//
-//		//TODO checks
-//
-//		// returns bytes that have been read
-//		return readBytes;
-//	}
+	private int read(int fileDescriptor, int buffer, int size){
+		int readBytes = 0;
+		byte[] byteBuff = new byte[size];
+
+		// checks for invalid fd
+		if (fileDescriptor < 0 || fileDescriptor >= maxfileTableValue){
+			return -1;
+		}
+
+		// checks if entry exists in fileTable
+		if (fileTable[fileDescriptor] == null) {
+			return -1;
+		}
+
+		// checks of size makes sense
+		if (size < 0){
+			return -1;
+		}
+
+		// reads from the fileTable
+		readBytes = fileTable[fileDescriptor].read(byteBuff, readBytes, size - readBytes);
+		// writes to the virtual address space
+		boolean condition = writeVirtualMemory(buffer,byteBuff,0,readBytes) != readBytes;
+
+		if(condition){
+			return -1;
+		}
+
+		//TODO rename above
+
+		// returns bytes that have been read
+		return readBytes;
+	}
 
 	private int write(int fileDescriptor, int buffer, int size){
 		// this function closes fd
