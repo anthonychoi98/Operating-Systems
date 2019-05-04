@@ -221,11 +221,12 @@ public class UserProcess {
 		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
 
 		byte[] memory = Machine.processor().getMemory();
+		int addressOffset = vaddr % Processor.pageSize;
+		int VP = vaddr / Processor.pageSize;
 
 		int transfer = 0;
-		while (length > 0 && offset < data.length) {
-			int addressOffset = vaddr % Processor.pageSize;
-			int VP = vaddr / Processor.pageSize;
+		
+		while (length > 0 && offset < data.length && VP < pageTable.length && VP > 0) {
 
 			if (VP >= pageTable.length || VP < 0) {
 				break;
@@ -236,18 +237,21 @@ public class UserProcess {
 				break;
 			}
 			pageTableEntry.used = true;
-			//pageTableEntry.dirty = true;
+			pageTableEntry.dirty = true;
 
 			int physicalPage = pageTableEntry.ppn;
 			int physicalAddress = physicalPage * Processor.pageSize + addressOffset;
 			//amount is minimum byte length to transfer
-			int amount = Math.min(data.length-offset, Math.min(length, 1024-addressOffset));
+			int amount = Math.min(data.length-offset, Math.min(length, Processor.pageSize-addressOffset));
 			//update
 			System.arraycopy(data, offset, memory, physicalAddress, amount);
 			offset += amount;
 			length -= amount;
 			vaddr += amount;
 			transfer += amount;
+			
+			addressOffset = vaddr % Processor.pageSize;
+			VP = vaddr / Processor.pageSize;
 		}
 
 		return transfer;
