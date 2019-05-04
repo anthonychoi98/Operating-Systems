@@ -25,6 +25,14 @@ public class UserProcess {
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
+
+		// allocates 16 files for the file table.
+		fileTable = new OpenFile[16];
+
+
+		fileTable[0] = UserKernel.console.openForReading();
+		fileTable[1] = UserKernel.console.openForWriting();
+
 		int numPhysPages = Machine.processor().getNumPhysPages();
 		pageTable = new TranslationEntry[numPhysPages];
 		for (int i=0; i<numPhysPages; i++)
