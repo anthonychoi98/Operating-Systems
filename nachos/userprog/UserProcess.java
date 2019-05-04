@@ -7,6 +7,13 @@ import nachos.threads.ThreadedKernel;
 import java.io.EOFException;
 import java.util.Iterator;
 import java.util.PriorityQueue;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+
 
 /**
  * Encapsulates the state of a user process that is not contained in its
@@ -21,10 +28,30 @@ import java.util.PriorityQueue;
  * @see	nachos.network.NetProcess
  */
 public class UserProcess {
+
+	private static final int ROOT = 1;
+	private static int unique = ROOT;
+	private int process_id;
+
+	private UThread thread;
+	private HashMap<Integer, childProcess> map;
+	private childProcess myChildProcess;
+
+	class childProcess{
+		UserProcess child;
+		int status;
+
+		childProcess(UserProcess process){
+			this.child=process;
+			this.status=-999;
+		}
+	}
 	/**
 	 * Allocate a new process.
 	 */
 	public UserProcess() {
+
+		map=new HashMap<Integer, childProcess>();
 
 		// allocates 16 files for the file table.
 		fileTable = new OpenFile[16];
@@ -39,9 +66,8 @@ public class UserProcess {
 			pageTable[i] = new TranslationEntry(i,i, true,false,false,false);
 
 		/**task 3 **/
-		userProcessPID = UserKernel.nextPid();//need to know what our next pid assignment can be
-		UserKernel.addProcess(userProcessPID, this); //add userProcess to userKernel for assignment
-
+		this.process_id = unique;
+		unique++;
 	}
 
 	/**
@@ -392,6 +418,13 @@ public class UserProcess {
 	 * Release any resources allocated by <tt>loadSections()</tt>.
 	 */
 	protected void unloadSections() {
+
+		for (int i=0; i<pageTable.length; i++) {
+			if (pageTable[i].valid) {
+				UserKernel.deallocatePage(pageTable[i].ppn);
+				pageTable[i].valid = false;
+			}
+		}
 	}    
 
 	/**
@@ -422,6 +455,10 @@ public class UserProcess {
 	 */
 	private int handleHalt() {
 
+		if (this.process_id != ROOT) {
+			return 0;
+		}
+
 		Machine.halt();
 
 		Lib.assertNotReached("Machine.halt() did not halt machine!");
@@ -433,34 +470,27 @@ public class UserProcess {
 	 * Exit function for syscalls
 	 * @param status
 	 */
-	public void exit(int status) {
-
-
-		//close open file descriptors belonging to the process
-		// TODO WRITE THIS FUNCTION
-		//		closeAllFileDescriptors();
-
-
-		while(!childrenProcesses.isEmpty()) {
-			UserProcess childP = UserKernel.findUserProcess(childrenProcesses.peek());
-			childP.parentPID = 1;
-			childrenProcesses.remove();
-
+	private void exit(int status){
+		if(myChildProcess!=null){
+			myChildProcess.status = status;
 		}
-		statusOfExit = status;
 
-		//release all resources allocated 
-		for(int i = 0; i < numPages;i++) {
-			UserKernel.newPageFree(pageTable[i].ppn);
-			pageTable[i].valid = false;
+		//close all the opened files
+		for (int i=0; i<16; i++) {              
+			close(i);
 		}
-		if(this.userProcessPID == 1) {
+
+		//part2 implemented
+		this.unloadSections();
+
+		if(this.process_id==ROOT){
 			Kernel.kernel.terminate();
-		}else {
-			KThread.currentThread().finish();
 		}
 
-		Lib.assertNotReached();
+		else{
+			KThread.finish();
+			Lib.assertNotReached();
+		}
 	}
 	/**
 	 * exec function for syscalls
@@ -469,50 +499,46 @@ public class UserProcess {
 	 * @param argv
 	 * @return 
 	 */
-	public int exec(int file, int argc, int argv) {
-		String fileRead = readVirtualMemoryString(file, 256);
+	private int exec(int file, int argc, int argv){
+		if(file<0 || argc<0 || argv<0){
+			return -1;
+		}
+		String fileName= readVirtualMemoryString(file,256);
 
-		if(argc < 1) {return -1;}
+		if(fileName==null){
+			return -1;
+		}
 
-		String arguments[] = new String[argc];
-		byte data[] = new byte[4];
-		//look for .coff extension
-		String lookForExtension = fileRead.substring(fileRead.length()-5, fileRead.length());
-		//check if less than one arg and null for file read and for file extension .coff
-		if(argc < 1 || fileRead ==null || !(lookForExtension.equals(".coff"))) return -1;
+		String args[]= new String[argc];
 
-
-		int i = 0;
-		while( i < argc) {
-			int count = readVirtualMemory(argv + i*4, data);
-			if(count == 4) {
-
-			}else {
+		int byteReceived,argAddress;
+		byte temp[]=new byte[4];
+		for(int i =0; i<argc; i++){
+			byteReceived=readVirtualMemory(argv+i*4,temp);
+			if(byteReceived !=4){
 				return -1;
 			}
-			arguments[i] = readVirtualMemoryString(Lib.bytesToInt(data, 0), 256);
-			i++;
+
+			argAddress=Lib.bytesToInt(temp, 0);
+			args[i]=readVirtualMemoryString(argAddress, 256);
+
+			if(args[i]==null){
+				return -1;
+			}
+
 		}
+		UserProcess child=UserProcess.newUserProcess();
+		childProcess newProcessData = new childProcess(child);
+		child.myChildProcess = newProcessData;
 
-
-		//now we can create a new child process to be added to his parent userProcess
-		UserProcess child = UserProcess.newUserProcess();
-		child.parentPID = this.userProcessPID;
-		this.childrenProcesses.add(child.userProcessPID); //add to queue
-
-		if(child.execute(fileRead, arguments)) {
-			return child.userProcessPID;
+		if(child.execute(fileName, args)){
+			map.put(child.process_id, newProcessData);
+			return child.process_id;
 		}
-
-
-
-
-
-
-
 
 		return -1;
 	}
+
 	/**
 	 * Helper function to find and remove child in Child Queue
 	 * @param childPID
@@ -537,30 +563,40 @@ public class UserProcess {
 	 * @param addr
 	 * @return
 	 */
-	public int Join(int cPid, int addr) {
+	private int join(int pid,int status){
+		if (pid <0 || status<0){
+			return -1;
+		}
+		//get the child process from our hashmap
+		childProcess childData;
+		if(map.containsKey(pid)){
+			childData = map.get(pid);
+		}
+		else{
+			return -1;
+		}
 
-		if(!findAndRemoveChild(cPid)) { return -1;} //not found in parent child PID list
+		//join it
+		childData.child.thread.join();
 
+		//remove from hashmap
+		map.remove(pid);
 
-		UserProcess childToJoin = UserKernel.findUserProcess(cPid);
+		//write the exit # to the address status
+		if(childData.status!=-999){
+			byte exitStatus[] = new byte[4];
+			exitStatus=Lib.bytesFromInt(childData.status);
+			int byteTransfered=writeVirtualMemory(status,exitStatus);
 
-
-		if(childToJoin != null) { //hasnt joined yet
-			childToJoin.currentThread.join();
-			//removed from kernels Queue of userprocess
-			UserKernel.removeProcess(cPid);
-
-			if(writeVirtualMemory(addr, Lib.bytesFromInt(childToJoin.statusOfExit)) != 4) {
+			if(byteTransfered == 4){
 				return 1;
-			}else {
+			}
+			else{
 				return 0;
 			}
 
-
 		}
-
-
-		return -2;
+		return 0;
 	}
 	/**End of TASK3 **/
 
@@ -823,7 +859,7 @@ public class UserProcess {
 		case syscallExec:
 			return exec(a0,a1,a2);
 		case syscallJoin:
-			return Join(a0,a1);
+			return join(a0,a1);
 		case syscallCreate:
 			return creat(a0);
 		case syscallOpen:
