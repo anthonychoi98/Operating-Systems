@@ -129,7 +129,7 @@ public class PriorityScheduler extends Scheduler {
      */
     protected class PriorityQueue extends ThreadQueue {
 	PriorityQueue(boolean transferPriority) {
-	    this.transferPriority = transferPriority;
+	    this.swapPriority = transferPriority;
 	}
 
 	/*thread will go from a running to waiting state*/
@@ -232,7 +232,7 @@ public class PriorityScheduler extends Scheduler {
 	/*Create Helper Method*/
 	public int getEffectivePriority() {
 			//int minPriority;
-		if (transferPriority == false) {
+		if (swapPriority == false) {
 			return priorityMinimum;	//already initialized variable set to 0
 		}	
 			int temp;
@@ -258,7 +258,7 @@ public class PriorityScheduler extends Scheduler {
  *  to true if and only if a transfer/donation has been made*/
 public void swapPriority() {
 //
-	if (transferPriority == false) {	//if donation hasn't occurred
+	if (swapPriority == false) {	//if donation hasn't occurred
 		return;
 	}
 /*if no donation has been made that means that there has been a donation made
@@ -278,7 +278,7 @@ public void swapPriority() {
 	 * <tt>true</tt> if this queue should transfer priority from waiting
 	 * threads to the owning thread.
 	 */
-	public boolean transferPriority;
+	public boolean swapPriority;
 /*Because priorities will be donated from the threads 
  * waiting in linkedlist, we need to include all methods above that are needed
  * to assist wit the donations/labeling of priority, as well as letting them

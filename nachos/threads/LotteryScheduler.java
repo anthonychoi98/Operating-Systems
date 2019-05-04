@@ -1,10 +1,18 @@
 package nachos.threads;
 
+//include imports/headers
 import nachos.machine.*;
-
 import java.util.TreeSet;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Random;
+
+import nachos.machine.Lib;
+import nachos.machine.Machine;
+import nachos.threads.PriorityScheduler.PriorityQueue;
+
 
 /**
  * A scheduler that chooses threads using a lottery.
@@ -26,23 +34,291 @@ import java.util.Iterator;
  * Unlike a priority scheduler, these tickets add (as opposed to just taking
  * the maximum).
  */
-public class LotteryScheduler extends PriorityScheduler {
+public class LotteryScheduler extends PriorityScheduler { 
     /**
-     * Allocate a new lottery scheduler.
-     */
-    public LotteryScheduler() {
-    }
+     * Allocate a new lottery scheduler. 
+     */ 
+	
+	//public static final int priorityDefault = 0;
+		//won't work because each thread needs to be given a chance at the resource
+		//not only the thread with the highest priority, which is the effective
+		public static final int priorityDefault = 1;
+		//minimum priority a thread should have
+		public static final int priorityMinimum = 1;
+		//maximum priority value a thread should have
+		public static final int priorityMaximum = Integer.MAX_VALUE;
+		
+		//public class LotteryScheduler() {
+	
+    public LotteryScheduler() { 
     
+    } 
+ 
     /**
-     * Allocate a new lottery thread queue.
-     *
-     * @param	transferPriority	<tt>true</tt> if this queue should
-     *					transfer tickets from waiting threads
-     *					to the owning thread.
-     * @return	a new lottery thread queue.
-     */
-    public ThreadQueue newThreadQueue(boolean transferPriority) {
-	// implement me
-	return null;
-    }
-}
+     * Allocate a new lottery thread queue. 
+     * 
+     * @param transferPriority <tt>true</tt> if this queue should 
+     *     transfer tickets from waiting threads 
+     *     to the owning thread. 
+     * @return a new lottery thread queue. 
+     */ 
+    public ThreadQueue newThreadQueue(boolean transferPriority) { 
+        return new LotteryQueue(transferPriority); 
+    } 
+ 
+    
+    //------------------------------------------------------------------
+    /*references: https://www.geeksforgeeks.org/operating-system-lottery-scheduling/
+     * */
+    
+    public void setPriority(KThread thread, int priority) { 
+        Lib.assertTrue(Machine.interrupt().disabled()); 
+        getThreadState(thread).setPriority(priority); 
+    } 
+ 
+    //------------------------------------------------------------------
+    
+    public boolean increasePriority() { 
+        boolean intStatus = Machine.interrupt().disable(); 
+ 
+        KThread thread = KThread.currentThread(); 
+        setPriority(thread, getPriority(thread) + 1); 
+ 
+        Machine.interrupt().restore(intStatus); 
+        return true; 
+    } 
+ 
+  //------------------------------------------------------------------
+    
+    public boolean decreasePriority() { 
+        boolean intStatus = Machine.interrupt().disable(); 
+ 
+        KThread thread = KThread.currentThread(); 
+        setPriority(thread, getPriority(thread) - 1); 
+ 
+        Machine.interrupt().restore(intStatus); 
+        return true; 
+    } 
+    
+  //------------------------------------------------------------------
+ 
+    protected ThreadState getThreadState(KThread thread) { 
+        if (thread.schedulingState == null) 
+            thread.schedulingState = new LotteryThreadState(thread); 
+ 
+        return (ThreadState) thread.schedulingState; 
+    } 
+
+    /**
+	 * Allocate a new lottery thread queue.
+	 * 
+	 * @param transferPriority
+	 *            <tt>true</tt> if this queue should transfer tickets from
+	 *            waiting threads to the owning thread.
+     * @return 
+	 * @return a new lottery thread queue.
+	 */
+   
+    
+
+	protected class LotteryQueue extends PriorityScheduler.PriorityQueue {
+		LotteryQueue(boolean transferPriority) {
+			super(transferPriority);
+		}
+		
+		/*
+		public KThread nextThread() {
+			Lib.assertTrue(Machine.interrupt().disable());
+			check if there is a thread currently at the resource
+			if(threadWithResource != null) {
+				LotteryThreadState prev_ThreadwithResource = (LotteryThreadState) ThreadwithResource;
+			}
+		}*/
+		
+		@Override
+		protected LotteryThreadState pickNextThread() {
+			/*
+			 * pickNextThread will randomly choose and return a thread that is located in
+			 * waitQueue of the scheduler. This scheduler is based on the total amount of 
+			 * tickets, the tickets are the priority value which is changed in getEffectivePriority.
+			 * */
+			
+			LinkedList<KThread> waitQueue = new LinkedList<KThread>();
+			
+			//first check if there are currently any threads in waitQueue
+			//if it's currently empty then retrun NULL, if not, then continue
+			//to add the total ammount of tickets in the 'pool'
+			if (waitQueue.isEmpty())
+				return null;
+			//initialize a variable to keep trach of the total amount of lottery tickets in draw
+			int totalLottery = 0;
+			
+			//initialize an array to keep track of each thread's amount of ticket from waitQueue
+			//keep track of the size of the array and the sum
+			//the sum will be the total of amount of tickets in pool and the amount of tickets 
+			//for a certain thread
+			
+			int[] sum = new int[waitQueue.size()];
+			
+			int i = 0;
+			
+/*should range from ( 0 - (#total amount of tickets - 1) )*/
+			
+			/*
+			 * check if the total tickets is greater than 0, meaning that they are actually threads,
+			 * and that these threads will all have access to the resource, unlick PriorityScheduler
+			 * */
+			
+			for (KThread thread : waitQueue)
+				// end of adding the total amount of lottery tickets in pool and a current threads # of tickets
+				sum[i++] = totalLottery += getThreadState(thread).getEffectivePriority();
+			
+			/*go through each thread in waitQueue, retrieve the difference between the # and the current
+			 * threads highestPriority, */
+			int lottery = random.nextInt(totalLottery);
+
+			i = 0;
+			for (KThread thread : waitQueue)
+				if (lottery < sum[i++])
+					return (LotteryThreadState) getThreadState(thread); 
+
+			Lib.assertNotReached();
+			return null;
+		} //this for loop should be able to find/locate a threadState to return
+	}
+	
+	/*
+	 * INCORRECT--> was trying to figure out the donation of tickets, but was confusing myself
+	 * because I was doing something too similar to PriorityScheduler which is not 
+	 * needed since we are inheriting code from that class
+	//Small boolean to see if we need to transfer our priority in the situation where
+	//the our effectivePriority is going to change based on the results from searching
+	//through the owned HashSet
+	boolean transferPriority;
+	
+	if(currentPriority != effectivePriority){
+		transferPriority = true;
+	}
+	else{
+		transferPriority = false;
+	}
+	
+	//Set the effective priority to the newly calculated priority else it would just be
+	//the base priority as declared above
+	effectivePriority = currentPriority;
+	
+	*/
+	
+	/* We need to ensure that the scheduling state of a thread, should it should require
+	 * that threads priority value, the highest priority value (effective), along with 
+	 * any objects the thread may own. Each thread should have their ticket value and the 
+	 * total ammount of tickets in the pool*/
+	
+	protected class LotteryThreadState extends PriorityScheduler.ThreadState {
+		
+		//protected class, meaning that none of the values can be changed, unless done manually
+		//LotteryThreadState extends the functionality of the donation of priority
+		//shouldn't require a large amount of code because of this 
+		protected LinkedList<LotteryQueue> donationQueue = new LinkedList<LotteryQueue>();
+		
+		//create a new linkedlist for the lottery threads and prepare for donation of tickets
+		//between threads
+		
+		public LotteryThreadState(KThread thread) { //retreive threads from KThread
+			//the compiler creates byte code equivalent to super()
+			super(thread); //pass thread to LotteryThreadState super class
+		}
+	
+
+		@Override
+		//allow a sub/child class to provide a different specific implementation of a method,
+		//that may be already provided by it's super/parent class
+		//this is located in the above super classes for LotteryThreadState
+		
+		public int getEffectivePriority() {
+	/*return the Hash Set, we need to use a HashSet to prevent the threads from having 
+	the same ammount of tickets as another thread, which wouldn't work due to if		//we randomly choose a thread containing 20, if there are 3 threads containing 20
+	tickets, then it would return 3 threads of highest priority to the resource
+	which could not happen as only one threads at a time has access to the resource*/
+			return getEffectivePriority(new HashSet<LotteryThreadState>());
+		}
+		
+		private int getEffectivePriority(HashSet<LotteryThreadState> set) {
+		/*now set the HashSet created to private so that the member's access is private
+		and so that the member is only visible from within THIS class, not child/sub/parent class */		
+			if (set.contains(this)) { //required from Java.util.HashSet.contains() method above
+		//we need to check if a set contains any particular element
+				return priority;
+		//return the priority of that thread that is present (ticket value)
+			}
+			
+		/*initialize a variable to keep track of the ticket values from the threads in the HashSet
+		the amount of tickets from the thread will be the highest/effective priority
+		we don't need to compare values for the "highest" value as we are get the priority
+		based on probability */
+			
+			int highestPriority = priority; 
+
+			for (PriorityQueue queue : donationQueue) //Queue to keep track of tickets that
+				//may be donated between threads
+				
+			/*
+			 * check the new donation queue created and apply transferPriority so that the threads
+			 * can donate their tickets to one another. If we wanted the lottery winner to contain
+			 * 23 tickets for example, and if there were a thread that contained 22 tickets and 
+			 * that thread was the closest to winning the lottery compared to the others then 
+			 * other threads will donate their tickets so that thread can have access to the resource
+			 * */
+				if (queue.swapPriority) //go through the queue of threads
+					//for threads in waitQueue
+					for (KThread thread : queue.waitQueue) {
+						set.add(this);
+						highestPriority += getThreadState(thread).getEffectivePriority();
+						set.remove(this);
+					}
+			
+			PriorityQueue queue = (PriorityQueue) thread.getJoinQueue(); 
+			/*this is important so that there is no lock, meaning less 
+			 * donations would need to be done*/
+			if (queue.swapPriority)
+				for (KThread thread : queue.waitQueue) {
+					set.add(this);
+					highestPriority += getThreadState(thread).getEffectivePriority();
+					set.remove(this);
+				}
+
+			return highestPriority; //return priority of associated thread
+		}
+	}
+	
+	protected Random random = new Random(25);
+}    //end of lotterScheduler class
+
+
+/* INCORRECT --> REDO
+//Save the current Priority for comparison and swapping purposes
+		int currentPriority = priority;
+		
+		//PriorityQueue x = waitingFor.iterator().next();
+		
+		//for loop used to access the (in this case one element) of the HashSet
+		//(this) is then removed temporarily from the waitQueue to ensure we 
+		//don't mistakenly compare (this) to itself
+		for (PriorityQueue j : waitingFor){
+			j.waitQueue.remove(this); 
+		}
+	
+		//Walk through (this)'s owned resources looking for waitQueues marked 
+		//with transfer priority. Once one is found, retrieve the threads priority
+		//and (if the donating priority is greater than current priority) make the swap.
+		for (PriorityQueue j : owned) {
+			if(j.transferPriority){
+				if(j.pickNextThread() != null){
+					int donatingPri = j.pickNextThread().getEffectivePriority();
+					if(donatingPri > currentPriority){
+						currentPriority = donatingPri;
+					}
+				}
+			}	
+		}
+*/
