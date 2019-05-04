@@ -438,7 +438,7 @@ public class UserProcess {
 
 		//close open file descriptors belonging to the process
 		// TODO WRITE THIS FUNCTION
-//		closeAllFileDescriptors();
+		//		closeAllFileDescriptors();
 
 
 		while(!childrenProcesses.isEmpty()) {
@@ -566,10 +566,10 @@ public class UserProcess {
 
 
 	//  ____            _     _
-// |  _ \ __ _ _ __| |_  / |
-// | |_) / _` | '__| __| | |
-// |  __/ (_| | |  | |_  | |
-// |_|   \__,_|_|   \__| |_|
+	// |  _ \ __ _ _ __| |_  / |
+	// | |_) / _` | '__| __| | |
+	// |  __/ (_| | |  | |_  | |
+	// |_|   \__,_|_|   \__| |_|
 
 
 
@@ -753,12 +753,12 @@ public class UserProcess {
 	}
 
 
-// ____ ____ _  _ ___  ____ _  _ _ ____ _  _  ____ _  _ _  _ ____ ___ _ ____ _  _ ____
-// |    |  | |\/| |__] |__| |\ | | |  | |\ |  |___ |  | |\ | |     |  | |  | |\ | [__
-// |___ |__| |  | |    |  | | \| | |__| | \|  |    |__| | \| |___  |  | |__| | \| ___]
+	// ____ ____ _  _ ___  ____ _  _ _ ____ _  _  ____ _  _ _  _ ____ ___ _ ____ _  _ ____
+	// |    |  | |\/| |__] |__| |\ | | |  | |\ |  |___ |  | |\ | |     |  | |  | |\ | [__
+	// |___ |__| |  | |    |  | | \| | |__| | \|  |    |__| | \| |___  |  | |__| | \| ___]
 
 
-//TODO extract more functions from repeated code
+	//TODO extract more functions from repeated code
 
 	// searches fileTable for a space that's null
 	public int findFreeFileDescriptor(){
@@ -817,12 +817,13 @@ public class UserProcess {
 		switch (syscall) {
 		case syscallHalt:
 			return handleHalt();
-//		case syscallExit:
-//			exitFile(a0);
-//		case syscallExec:
-//			return executeFile(a0, a1, a2);
-//		case syscallJoin:
-//			return joinFile(a0, a1);
+		case syscallExit:
+			exit(a0);
+			return 0;
+		case syscallExec:
+			return exec(a0,a1,a2);
+		case syscallJoin:
+			return Join(a0,a1);
 		case syscallCreate:
 			return creat(a0);
 		case syscallOpen:
