@@ -147,81 +147,46 @@ public class UserProcess {
 	 */
 	public int readVirtualMemory(int vaddr, byte[] data, int offset,
 			int length) {
+		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
+
+		byte[] memory = Machine.processor().getMemory();
+
+		int transfer = 0;
+		int VP = vaddr/Processor.pageSize;
+		int addressOffset = vaddr % Processor.pageSize;
 		
-		if(!(offset >= 0 && length >= 0 && offset + length <= data.length)) {
-            return 0;
-        }
-
-        byte[] physicalMemory = Machine.processor().getMemory();
-        int memoryRead = 0;
-        while(memoryRead < length) {
-
-            int vpn = (vaddr + memoryRead) / pageSize;
-            int virtual_offset = (vaddr + memoryRead) % pageSize;
-
-            if(0 > vpn ||  pageTable.length <= vpn) {
-                return 0;
-            }
-            TranslationEntry TableEntry = pageTable[vpn];
-            if(TableEntry == null || TableEntry.valid == !true) {
-                System.out.println("VPN " + vpn + " Entry not valid");
-                return 0;
-            }
-
-            int physicalAddress = TableEntry.ppn * pageSize + virtual_offset;
-            //System.out.println("Physical address: " + physicalAddress);
-            if (0 > physicalAddress||  physicalMemory.length <= physicalAddress)
-                return 0;
-
-            int maxLimit = (TableEntry.ppn + 1) * pageSize;
-            int amount = Math.min(maxLimit - physicalAddress, Math.min(length - memoryRead, physicalMemory.length - physicalAddress));
-
-            System.arraycopy(physicalMemory, physicalAddress, data, offset + memoryRead, amount);
-            memoryRead = memoryRead +  amount;
-        }
-
-        return memoryRead;
 		
-//		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
-//
-//		byte[] memory = Machine.processor().getMemory();
-//
-//		int transfer = 0;
-//		int VP = vaddr/Processor.pageSize;
-//		int addressOffset = vaddr % Processor.pageSize;
-//		
-//		
-//		while (length > 0 && offset < data.length) {
-//			//get virtual page and address offset
-////			int VP = vaddr/Processor.pageSize;
-////			int addressOffset = vaddr % Processor.pageSize;
-//			
-//			//check that virtual page is valid
-//			if (VP >= pageTable.length || VP < 0) {
-//				break;
-//			}
-//			//create page table entry
-//			TranslationEntry pageTableEntry = pageTable[VP];
-//			//check that page table entry is valid
-//			if (!pageTableEntry.valid) {
-//				break;
-//			}
-//			//mark page table entry as used
-//			pageTableEntry.used = true;
-//			//get physical page and address to read virtual memory
-//			int physicalPage = pageTableEntry.ppn;
-//			int physicalAddress = physicalPage * Processor.pageSize + addressOffset;
-//			int amount = Math.min(data.length-offset, Math.min(length, Processor.pageSize-addressOffset));
-//			System.arraycopy(memory, physicalAddress, data, offset, amount);
-//			offset += amount;
-//			length -= amount;
-//			vaddr += amount;
-//			transfer += amount;
-//			
-//			addressOffset = vaddr % Processor.pageSize;
-//			VP = vaddr/Processor.pageSize;
-//		}
-//		return transfer;
+		while (length > 0 && offset < data.length) {
+			//get virtual page and address offset
+//			int VP = vaddr/Processor.pageSize;
+//			int addressOffset = vaddr % Processor.pageSize;
+			
+			//check that virtual page is valid
+			if (VP >= pageTable.length || VP < 0) {
+				break;
+			}
+			//create page table entry
+			TranslationEntry pageTableEntry = pageTable[VP];
+			//check that page table entry is valid
+			if (!pageTableEntry.valid) {
+				break;
+			}
+			//mark page table entry as used
+			pageTableEntry.used = true;
+			//get physical page and address to read virtual memory
+			int physicalPage = pageTableEntry.ppn;
+			int physicalAddress = physicalPage * Processor.pageSize + addressOffset;
+			int amount = Math.min(data.length-offset, Math.min(length, Processor.pageSize-addressOffset));
+			System.arraycopy(data, offset, memory, physicalAddress, amount);
+			offset += amount;
+			length -= amount;
+			vaddr += amount;
+			transfer += amount;
+			
+			addressOffset = vaddr % Processor.pageSize;
+			VP = vaddr/Processor.pageSize;
+		}
+		return transfer;
 	}
 
 	/**
@@ -253,89 +218,48 @@ public class UserProcess {
 	 */
 	public int writeVirtualMemory(int vaddr, byte[] data, int offset,
 			int length) {
+		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
+
+		byte[] memory = Machine.processor().getMemory();
+		int addressOffset = vaddr % pageSize;
+		int VP = vaddr / pageSize;
+
+		int transfer = 0;
 		
-		if(!(offset >= 0 && length >= 0 && offset + length <= data.length)) {
-            return 0;
-        }
+		while (length > 0 && offset < data.length) {
 
-        byte[] physicalMemory = Machine.processor().getMemory();
-        int memoryWrite = 0;
-        while(memoryWrite < length) {
+			if (VP >= pageTable.length || VP < 0) {
+				break;
+			}
 
-            int vpn = (vaddr + memoryWrite) / pageSize;
-            
-            int virtualOffset;
-            virtualOffset = (vaddr + memoryWrite) % pageSize;
-            if(0 > vpn || pageTable.length <= vpn) {
-                return 0;
-            }
+			TranslationEntry pageTableEntry = pageTable[VP];
+			if (!pageTableEntry.valid || pageTableEntry.readOnly) {
+				break;
+			}
+			pageTableEntry.used = true;
+			pageTableEntry.dirty = true;
 
-            TranslationEntry TableEntry = pageTable[vpn];
-            if(TableEntry == null || TableEntry.valid == !true) {
-                TableEntry.ppn = UserKernel.getAvailablePage();
-                TableEntry.valid = !false;
-            }
-            if(TableEntry.readOnly == !false) {
-                return 0;
-            }
-            TableEntry.used = !false;
+			int physicalPage = pageTableEntry.ppn;
+			int physicalAddress = physicalPage * pageSize + addressOffset;
+			//check that physical address makes sense
+			if(physicalAddress < 0 || physicalAddress >= memory.length) {
+				return 0;
+			}
+			
+			//amount is minimum byte length to transfer
+			int amount = Math.min(data.length-offset, Math.min(length, pageSize-addressOffset));
+			//update
+			System.arraycopy(data, offset, memory, physicalAddress, amount);
+			offset += amount;
+			length -= amount;
+			vaddr += amount;
+			transfer += amount;
+			
+			addressOffset = vaddr % pageSize;
+			VP = vaddr / pageSize;
+		}
 
-            int physical_addr = TableEntry.ppn * pageSize + virtualOffset;
-            if (  0 > physical_addr  ||  physicalMemory.length <= physical_addr)
-                return 0;
-            TableEntry.dirty = !false;
-
-            int amount = Math.min((maxLimit - physical_addr), Math.min(length - memoryWrite, physicalMemory.length - physical_addr));
-            int maxLimit = (TableEntry.ppn + 1) * pageSize;
-
-            System.arraycopy(data, offset + memoryWrite, physicalMemory, physical_addr, amount);
-            memoryWrite  = memoryWrite + amount;
-        }
-
-        return length;
-        
-//		Lib.assertTrue(offset >= 0 && length >= 0 && offset+length <= data.length);
-//
-//		byte[] memory = Machine.processor().getMemory();
-//		int addressOffset = vaddr % pageSize;
-//		int VP = vaddr / pageSize;
-//
-//		int transfer = 0;
-//		
-//		while (length > 0 && offset < data.length && VP < pageTable.length && VP > 0) {
-//
-////			if (VP >= pageTable.length || VP < 0) {
-////				break;
-////			}
-//
-//			TranslationEntry pageTableEntry = pageTable[VP];
-//			if (!pageTableEntry.valid || pageTableEntry.readOnly) {
-//				break;
-//			}
-//			pageTableEntry.used = true;
-//			pageTableEntry.dirty = true;
-//
-//			int physicalPage = pageTableEntry.ppn;
-//			int physicalAddress = physicalPage * pageSize + addressOffset;
-//			//check that physical address makes sense
-//			if(physicalAddress < 0 || physicalAddress >= memory.length) {
-//				return 0;
-//			}
-//			
-//			//amount is minimum byte length to transfer
-//			int amount = Math.min(data.length-offset, Math.min(length, pageSize-addressOffset));
-//			//update
-//			System.arraycopy(data, offset, memory, physicalAddress, amount);
-//			offset += amount;
-//			length -= amount;
-//			vaddr += amount;
-//			transfer += amount;
-//			
-//			addressOffset = vaddr % pageSize;
-//			VP = vaddr / pageSize;
-//		}
-//
-//		return transfer;
+		return transfer;
 	}
 
 
