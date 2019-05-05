@@ -26,11 +26,12 @@ public class UserProcess {
 	 */
 	public UserProcess() {
 
+		// TASK 1 START
 		// allocates 16 files for the file table.
-
 		fileTable = new OpenFile[maxfileTableValue];
 		fileTable[0] = UserKernel.console.openForReading();
 		fileTable[1] = UserKernel.console.openForWriting();
+		// TASK 1 END
 
 		int numPhysPages = Machine.processor().getNumPhysPages();
 		pageTable = new TranslationEntry[numPhysPages];
@@ -461,6 +462,7 @@ public class UserProcess {
 
 		Lib.assertNotReached();
 	}
+
 	/**
 	 * exec function for syscalls
 	 * @param file
@@ -512,6 +514,7 @@ public class UserProcess {
 
 		return -1;
 	}
+
 	/**
 	 * Helper function to find and remove child in Child Queue
 	 * @param childPID
@@ -530,6 +533,7 @@ public class UserProcess {
 		return false;
 
 	}
+
 	/**
 	 * Join function for syscalls
 	 * @param cPid
@@ -563,7 +567,7 @@ public class UserProcess {
 	}
 	/**End of TASK3 **/
 
-
+	// TASK 1 START
 	//  ____            _     _
 	// |  _ \ __ _ _ __| |_  / |
 	// | |_) / _` | '__| __| | |
@@ -571,12 +575,12 @@ public class UserProcess {
 	// |_|   \__,_|_|   \__| |_|
 
 
-
+	/**
+	 * Implementation of the create syscall
+	 * Create file, returns -1 if fails or if file already exists
+	 */
 	public int creat(int name){
-		/**
-		 * Implementation of the create syscall
-		 * Create file, returns -1 if fails or if file already exists
-		 */
+
 		// function doesn't take argument because it's only ever used for fileTable purposes.
 		int fileDescriptor = findFreeFileDescriptor();
 
@@ -606,11 +610,11 @@ public class UserProcess {
 		return fileDescriptor;
 	}
 
+	/**
+	 * Implementation of the open syscall
+	 * Attempts to open file, returns -1 if fails
+	 */
 	private int open(int name){
-		/**
-		 * Implementation of the open syscall
-		 * Attempts to open file, returns -1 if fails
-		 */
 
 		int fileDescriptor = findFreeFileDescriptor();
 		String filename = readVirtualMemoryString(name, maxbyte);
@@ -636,13 +640,14 @@ public class UserProcess {
 		return fileDescriptor;
 	}
 
+	/**
+	 * Implementation of the read syscall
+	 * Attempts to read file, places into buffer if successful
+	 * Returns size of buffer if successful
+	 * Returns -1 if fails
+	 */
 	private int read(int fileDescriptor, int buffer, int size){
-		/**
-		 * Implementation of the read syscall
-		 * Attempts to read file, places into buffer if successful
-		 * Returns size of buffer if successful
-		 * Returns -1 if fails
-		 */
+
 		// declaration of readBytes int and a byte buffer for writing to virtual memory
 		int readBytes = 0;
 		byte[] byteBuff = new byte[size];
@@ -654,11 +659,6 @@ public class UserProcess {
 
 		// checks if entry exists in fileTable
 		if (fileTable[fileDescriptor] == null) {
-			return -1;
-		}
-
-		// checks of size makes sense
-		if (size < 0){
 			return -1;
 		}
 
@@ -675,14 +675,13 @@ public class UserProcess {
 		return readBytes;
 	}
 
+	/**
+	 * Implementation of the write syscall
+	 * Attempts to write file, reads from buffer
+	 * Returns buffer if successful
+	 * Returns -1 if fails
+	 */
 	private int write(int fileDescriptor, int buffer, int size){
-		/**
-		 * Implementation of the write syscall
-		 * Attempts to write file, reads from buffer
-		 * Returns buffer if successful
-		 * Returns -1 if fails
-		 */
-
 
 		// checks for invalid fd
 		if (fileDescriptor < 0 || fileDescriptor >= maxfileTableValue){
@@ -723,14 +722,13 @@ public class UserProcess {
 		return bytes;
 	}
 
+	/**
+	 * Implementation of the close syscall
+	 * Attempts to close file by replacing fileDiscriptor with null in fileTable
+	 * Returns 0 if successful
+	 * Returns -1 if fails
+	 */
 	public int close(int fileDescriptor){
-		/**
-		 * Implementation of the close syscall
-		 * Attempts to close file by replacing fileDiscriptor with null in fileTable
-		 * Returns 0 if successful
-		 * Returns -1 if fails
-		 */
-
 		// checks for invalid fd
 		if (fileDescriptor < 0 || fileDescriptor >= maxfileTableValue){
 			return -1;
@@ -758,19 +756,18 @@ public class UserProcess {
 		// completed successfully
 		return 0;
 	}
-
+	/**
+	 * Implementation of the unlink syscall
+	 * Attempts to unlink file from memory
+	 * Returns size of buffer if successful
+	 * Returns -1 if fails
+	 */
 	public int unlink(int name){
-		/**
-		 * Implementation of the unlink syscall
-		 * Attempts to unlink file from memory
-		 * Returns size of buffer if successful
-		 * Returns -1 if fails
-		 */
 
 		String filename = readVirtualMemoryString(name, maxbyte);
 
 		// checks if filename is valid
-		if (filename.length() == 0 || filename == null){
+		if (filename.length() == 0){
 			return -1;
 		}
 
@@ -806,6 +803,7 @@ public class UserProcess {
 		// if there is no free file descriptor found, return -1
 		return -1;
 	}
+	// TASK 1 END
 
 	private static final int
 	syscallHalt = 0,
@@ -937,6 +935,8 @@ public class UserProcess {
 	static PriorityQueue<Integer> childrenProcesses = new PriorityQueue<Integer>();
 	/** END OF TASK 3**/
 
+
+	// TASK 1 START
 	// ____ ____ _  _ ___  ____ _  _ _ ____ _  _  _  _ ____ ____ _ ____ ___  _    ____ ____
 	// |    |  | |\/| |__] |__| |\ | | |  | |\ |  |  | |__| |__/ | |__| |__] |    |___ [__
 	// |___ |__| |  | |    |  | | \| | |__| | \|   \/  |  | |  \ | |  | |__] |___ |___ ___]
@@ -948,6 +948,8 @@ public class UserProcess {
 	private static final int maxbyte = 256;
 	// I wonder if we could make this a vector for fun
 	private OpenFile[] fileTable;
+
+	// TASK 1 END
 
 
 }
