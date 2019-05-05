@@ -27,9 +27,8 @@ public class UserProcess {
 	public UserProcess() {
 
 		// allocates 16 files for the file table.
-		fileTable = new OpenFile[16];
 
-
+		fileTable = new OpenFile[maxfileTableValue];
 		fileTable[0] = UserKernel.console.openForReading();
 		fileTable[1] = UserKernel.console.openForWriting();
 
@@ -574,6 +573,10 @@ public class UserProcess {
 
 
 	public int creat(int name){
+		/**
+		 * Implementation of the create syscall
+		 * Create file, returns -1 if fails or if file already exists
+		 */
 		// function doesn't take argument because it's only ever used for fileTable purposes.
 		int fileDescriptor = findFreeFileDescriptor();
 
@@ -604,11 +607,14 @@ public class UserProcess {
 	}
 
 	private int open(int name){
-		// same lines as creat() except
-		// this time we pass false for ThreadedKernel.fileSystem.open as
+		/**
+		 * Implementation of the open syscall
+		 * Attempts to open file, returns -1 if fails
+		 */
+
 		int fileDescriptor = findFreeFileDescriptor();
 		String filename = readVirtualMemoryString(name, maxbyte);
-		OpenFile file = ThreadedKernel.fileSystem.open(filename, false);
+		OpenFile file = ThreadedKernel.fileSystem.open(filename, false); // false because we are opening the file not creating.
 
 		// if there is no available index, return -1
 		if (fileDescriptor == -1){
@@ -631,6 +637,13 @@ public class UserProcess {
 	}
 
 	private int read(int fileDescriptor, int buffer, int size){
+		/**
+		 * Implementation of the read syscall
+		 * Attempts to read file, places into buffer if successful
+		 * Returns size of buffer if successful
+		 * Returns -1 if fails
+		 */
+		// declaration of readBytes int and a byte buffer for writing to virtual memory
 		int readBytes = 0;
 		byte[] byteBuff = new byte[size];
 
@@ -652,21 +665,24 @@ public class UserProcess {
 		// reads from the fileTable
 		readBytes = fileTable[fileDescriptor].read(byteBuff, readBytes, size - readBytes);
 		// writes to the virtual address space
-		boolean condition = writeVirtualMemory(buffer,byteBuff,0,readBytes) != readBytes;
+		boolean assertNotEqual = writeVirtualMemory(buffer, byteBuff, 0, readBytes) != readBytes;
 
-		if(condition){
+		if(assertNotEqual){
 			return -1;
 		}
-
-		//TODO rename above
 
 		// returns bytes that have been read
 		return readBytes;
 	}
 
 	private int write(int fileDescriptor, int buffer, int size){
-		// this function closes fd
-		// if fd refers to a file written by write() will be flushed to disk before close()
+		/**
+		 * Implementation of the write syscall
+		 * Attempts to write file, reads from buffer
+		 * Returns buffer if successful
+		 * Returns -1 if fails
+		 */
+
 
 		// checks for invalid fd
 		if (fileDescriptor < 0 || fileDescriptor >= maxfileTableValue){
@@ -684,9 +700,10 @@ public class UserProcess {
 		}
 
 		// if not finish current thread and return -1;
-
 		byte[] byteBuff = new byte[size];
+		// declaration of write file OpenFile object
 		OpenFile wriFi = fileTable[fileDescriptor];
+		// named generically as is both read and written from
 		int bytes = readVirtualMemory(buffer, byteBuff);
 
 		// checks if the bytes are equal to the size tha was passed to write()
@@ -707,6 +724,13 @@ public class UserProcess {
 	}
 
 	public int close(int fileDescriptor){
+		/**
+		 * Implementation of the close syscall
+		 * Attempts to close file by replacing fileDiscriptor with null in fileTable
+		 * Returns 0 if successful
+		 * Returns -1 if fails
+		 */
+
 		// checks for invalid fd
 		if (fileDescriptor < 0 || fileDescriptor >= maxfileTableValue){
 			return -1;
@@ -736,6 +760,13 @@ public class UserProcess {
 	}
 
 	public int unlink(int name){
+		/**
+		 * Implementation of the unlink syscall
+		 * Attempts to unlink file from memory
+		 * Returns size of buffer if successful
+		 * Returns -1 if fails
+		 */
+
 		String filename = readVirtualMemoryString(name, maxbyte);
 
 		// checks if filename is valid
@@ -743,7 +774,10 @@ public class UserProcess {
 			return -1;
 		}
 
-		// if fails to unlink, returns
+		// TODO check if
+
+		// if fails to unlink, returns -1 else length of file which is 0
+		// TODO confirm if above statement correct
 		if (!UserKernel.fileSystem.remove(filename)){
 			return -1;
 		} else {
