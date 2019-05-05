@@ -756,6 +756,7 @@ public class UserProcess {
 		// completed successfully
 		return 0;
 	}
+
 	/**
 	 * Implementation of the unlink syscall
 	 * Attempts to unlink file from memory
@@ -763,6 +764,7 @@ public class UserProcess {
 	 * Returns -1 if fails
 	 */
 	public int unlink(int name){
+		// TODO FINISH UNLINK IMPLEMENTATION
 
 		String filename = readVirtualMemoryString(name, maxbyte);
 
@@ -781,6 +783,8 @@ public class UserProcess {
 			return 0; // successfully unlinks file
 		}
 
+
+		// TODO Fix this mess
 	}
 
 
@@ -948,8 +952,5 @@ public class UserProcess {
 	private static final int maxbyte = 256;
 	// I wonder if we could make this a vector for fun
 	private OpenFile[] fileTable;
-
 	// TASK 1 END
-
-
 }
