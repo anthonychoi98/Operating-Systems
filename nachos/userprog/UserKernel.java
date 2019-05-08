@@ -21,12 +21,9 @@ class Process{
  * A kernel that can support multiple user processes.
  */
 public class UserKernel extends ThreadedKernel {
-	public UserKernel() {
-		super();
-	}
 
 	static LinkedList<Integer> freePages;
-	//static ArrayList<Boolean> pageFree;
+	static ArrayList<Boolean> pageFree;
 
 	static {
 		initPages();
@@ -34,13 +31,13 @@ public class UserKernel extends ThreadedKernel {
 
 	public static void initPages() {
 		freePages = new LinkedList<Integer>();
-		//pageFree = new ArrayList<Boolean>();
+		pageFree = new ArrayList<Boolean>();
 		for (int i=0; i<Machine.processor().getNumPhysPages(); i++) {
 			freePages.add(i);
-			//pageFree.add(false);
+			pageFree.add(false);
 		}
 	}
-/*
+
 	public static int allocatePage() {
 		Machine.interrupt().disable();
 
@@ -63,13 +60,13 @@ public class UserKernel extends ThreadedKernel {
 		freePages.push(pageNum);
 		Machine.interrupt().enable();
 	}
-*/
+
 	/**
 	 * Allocate a new user kernel.
 	 */
-//	public UserKernel() {
-//		super();
-//	}
+	public UserKernel() {
+		super();
+	}
 
 	/**
 	 * Initialize this kernel. Creates a synchronized console and sets the
