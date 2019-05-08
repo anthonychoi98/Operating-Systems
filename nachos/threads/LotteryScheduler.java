@@ -62,53 +62,79 @@ public class LotteryScheduler extends PriorityScheduler {
      *     to the owning thread. 
      * @return a new lottery thread queue. 
      */ 
-    public ThreadQueue newThreadQueue(boolean transferPriority) { 
-        return new LotteryQueue(transferPriority); 
-    } 
  
-    
     //------------------------------------------------------------------
+
+    @Override
+    public int getPriority(KThread thread) {
+    	Lib.assertTrue(Machine.interrupt().disabled());
+    	
+    	return getThreadState(thread).getEffectivePriority();
+    }
+    
+  //------------------------------------------------------------------
     /*references: https://www.geeksforgeeks.org/operating-system-lottery-scheduling/
      * */
-    
+    @Override
     public void setPriority(KThread thread, int priority) { 
         Lib.assertTrue(Machine.interrupt().disabled()); 
+        Lib.assertTrue(priority >= priorityMinimum && priority <= priorityMaximum);
         getThreadState(thread).setPriority(priority); 
     } 
- 
+
     //------------------------------------------------------------------
+    @Override
+    public int getEffectivePriority(KThread thread){
+    	Lib.assertTrue(Machine.interrupt().disabled());
+    		return getThreadState(thread).getPriority();
+    }
     
+  //------------------------------------------------------------------
+   @Override 
     public boolean increasePriority() { 
         boolean intStatus = Machine.interrupt().disable(); 
  
         KThread thread = KThread.currentThread(); 
-        setPriority(thread, getPriority(thread) + 1); 
+        //create int variable priority to change from points to tickets
+        int priority = getPriority(thread); //retrieve priority of thread
+        if (priority == priorityMaximum) { //keep track of max to ensure we don't
+        	//go over the total is greater than max val or random val 
+        	return false; //boolean
+        }
+        setPriority(thread, priority + 1); 
  
         Machine.interrupt().restore(intStatus); 
         return true; 
     } 
  
   //------------------------------------------------------------------
-    
+   @Override 
     public boolean decreasePriority() { 
         boolean intStatus = Machine.interrupt().disable(); 
  
         KThread thread = KThread.currentThread(); 
-        setPriority(thread, getPriority(thread) - 1); 
+        //create int variable priority to change from points to tickets
+        int priority = getPriority(thread); //retrieve priority of thread
+        if (priority == priorityMinimum) { //keep track of max to ensure we don't
+        	//go over the total is greater than max val or random val 
+        	return false; //boolean
+        }
+        setPriority(thread, priority - 1); 
  
         Machine.interrupt().restore(intStatus); 
         return true; 
     } 
     
   //------------------------------------------------------------------
- 
-    protected ThreadState getThreadState(KThread thread) { 
-        if (thread.schedulingState == null) 
-            thread.schedulingState = new LotteryThreadState(thread); 
- 
-        return (ThreadState) thread.schedulingState; 
-    } 
-
+   
+   @Override 
+   protected LotteryThreadState getThreadState(KThread thread) {
+	   if (thread.schedulingState == null) 
+   			thread.schedulingState = new LotteryThreadState(thread);
+   			return (LotteryThreadState) thread.schedulingState;
+   		
+   }
+   
     /**
 	 * Allocate a new lottery thread queue.
 	 * 
@@ -118,9 +144,12 @@ public class LotteryScheduler extends PriorityScheduler {
      * @return 
 	 * @return a new lottery thread queue.
 	 */
-   
-    
 
+   public ThreadQueue newThreadQueue(boolean transferPriority) { 
+       return new LotteryQueue(transferPriority); 
+   } 
+
+   
 	protected class LotteryQueue extends PriorityScheduler.PriorityQueue {
 		LotteryQueue(boolean transferPriority) {
 			super(transferPriority);
@@ -143,22 +172,23 @@ public class LotteryScheduler extends PriorityScheduler {
 			 * tickets, the tickets are the priority value which is changed in getEffectivePriority.
 			 * */
 			
-			LinkedList<KThread> waitQueue = new LinkedList<KThread>();
+	//		LinkedList<KThread> waitQueue = new LinkedList<KThread>();
 			
 			//first check if there are currently any threads in waitQueue
 			//if it's currently empty then retrun NULL, if not, then continue
 			//to add the total ammount of tickets in the 'pool'
-			if (waitQueue.isEmpty())
+			if (waitQueue.isEmpty()) {
 				return null;
+			}
 			//initialize a variable to keep trach of the total amount of lottery tickets in draw
-			int totalLottery = 0;
+			int total_Lottery_Tickets = 0;
 			
 			//initialize an array to keep track of each thread's amount of ticket from waitQueue
 			//keep track of the size of the array and the sum
 			//the sum will be the total of amount of tickets in pool and the amount of tickets 
 			//for a certain thread
 			
-			int[] sum = new int[waitQueue.size()];
+			int[] sumTicketsinPool = new int[waitQueue.size()];
 			
 			int i = 0;
 			
@@ -171,15 +201,15 @@ public class LotteryScheduler extends PriorityScheduler {
 			
 			for (KThread thread : waitQueue)
 				// end of adding the total amount of lottery tickets in pool and a current threads # of tickets
-				sum[i++] = totalLottery += getThreadState(thread).getEffectivePriority();
+				sumTicketsinPool[i++] = total_Lottery_Tickets += getThreadState(thread).getEffectivePriority();
 			
 			/*go through each thread in waitQueue, retrieve the difference between the # and the current
 			 * threads highestPriority, */
-			int lottery = random.nextInt(totalLottery);
+			int lotteryTik = random.nextInt(total_Lottery_Tickets);
 
 			i = 0;
 			for (KThread thread : waitQueue)
-				if (lottery < sum[i++])
+				if (lotteryTik < sumTicketsinPool[i++])
 					return (LotteryThreadState) getThreadState(thread); 
 
 			Lib.assertNotReached();
@@ -257,7 +287,7 @@ public class LotteryScheduler extends PriorityScheduler {
 		we don't need to compare values for the "highest" value as we are get the priority
 		based on probability */
 			
-			int highestPriority = priority; 
+			int resourcePriority = priority; 
 
 			for (PriorityQueue queue : donationQueue) //Queue to keep track of tickets that
 				//may be donated between threads
@@ -273,21 +303,30 @@ public class LotteryScheduler extends PriorityScheduler {
 					//for threads in waitQueue
 					for (KThread thread : queue.waitQueue) {
 						set.add(this);
-						highestPriority += getThreadState(thread).getEffectivePriority();
+						resourcePriority += getThreadState(thread).getEffectivePriority();
 						set.remove(this);
 					}
 			
-			PriorityQueue queue = (PriorityQueue) thread.getJoinQueue(); 
+			PriorityQueue queue = (PriorityQueue) thread.waitForJoin; 
 			/*this is important so that there is no lock, meaning less 
 			 * donations would need to be done*/
 			if (queue.swapPriority)
 				for (KThread thread : queue.waitQueue) {
 					set.add(this);
-					highestPriority += getThreadState(thread).getEffectivePriority();
+				/*
+					for (PriorityQueue j : owned) {
+							if(j.transferPriority){
+									if(j.pickNextThread() != null){
+										int donatingPri = j.pickNextThread().getEffectivePriority();
+										if(donatingPri > currentPriority){
+											currentPriority = donatingPri;
+										}
+										*/
+					resourcePriority += getThreadState(thread).getEffectivePriority();
 					set.remove(this);
 				}
 
-			return highestPriority; //return priority of associated thread
+			return resourcePriority; //return priority of associated thread
 		}
 	}
 	
@@ -321,4 +360,4 @@ public class LotteryScheduler extends PriorityScheduler {
 				}
 			}	
 		}
-*/
+*/  
