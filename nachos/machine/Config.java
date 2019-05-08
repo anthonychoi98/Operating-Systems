@@ -79,6 +79,7 @@ public final class Config {
 		config.put(key, value);
 		line++;
 	    }
+	    
 	}
 	catch (Throwable e) {
 	    System.err.println("Error loading " + configFile);

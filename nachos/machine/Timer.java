@@ -72,6 +72,8 @@ public final class Timer {
     private void scheduleInterrupt() {
 	int delay = Stats.TimerTicks;
 	delay += Lib.random(delay/10) - (delay/20);
+	
+	//System.out.println("delay value: " + delay);
 
 	privilege.interrupt.schedule(delay, "timer", timerInterrupt);
     }

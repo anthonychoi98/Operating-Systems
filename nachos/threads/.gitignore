@@ -1,6 +1,8 @@
 /Alarm$1.class
+/Alarm$2.class
 /Alarm.class
 /Boat$1.class
+/Boat$2.class
 /Boat.class
 /Communicator.class
 /Condition.class
@@ -12,6 +14,7 @@
 /KThread.class
 /Lock.class
 /LotteryScheduler.class
+/PriorityScheduler$PriorityQueue$1.class
 /PriorityScheduler$PriorityQueue.class
 /PriorityScheduler$ThreadState.class
 /PriorityScheduler.class
@@ -19,9 +22,11 @@
 /RoundRobinScheduler$FifoQueue.class
 /RoundRobinScheduler.class
 /Scheduler.class
-/Semaphore.class
 /Semaphore$PingTest.class
+/Semaphore.class
 /SynchList$PingTest.class
 /SynchList.class
 /ThreadQueue.class
 /ThreadedKernel.class
+/threadY.class
+/threading.class

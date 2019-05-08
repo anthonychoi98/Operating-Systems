@@ -1,4 +1,5 @@
 /ArrayFile.class
+/AssertionFailureError.class
 /Coff.class
 /CoffSection.class
 /Config.class
@@ -7,9 +8,8 @@
 /ElevatorBank$ElevatorManager.class
 /ElevatorBank$ElevatorState.class
 /ElevatorBank$RiderState$1.class
-/ElevatorBank.class
-/AssertionFailureError.class
 /ElevatorBank$RiderState.class
+/ElevatorBank.class
 /ElevatorControllerInterface.class
 /ElevatorControls.class
 /ElevatorEvent.class

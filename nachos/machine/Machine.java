@@ -20,10 +20,13 @@ public final class Machine {
     public static void main(final String[] args) {
 	System.out.print("nachos 5.0j initializing...");
 	
+	
+	//args parameter is null
 	Lib.assertTrue(Machine.args == null);
 	Machine.args = args;
 
 	processArgs();
+	
 
 	Config.load(configFileName);
 
@@ -46,6 +49,7 @@ public final class Machine {
 
 	securityManager = new NachosSecurityManager(testDirectory);
 	privilege = securityManager.getPrivilege();
+	
 
 	privilege.machine = new MachinePrivilege();
 
@@ -58,6 +62,7 @@ public final class Machine {
 
 	autoGrader = (AutoGrader) Lib.constructObject(autoGraderClassName);
 
+	//
 	new TCB().start(new Runnable() {
 	    public void run() { autoGrader.start(privilege); }
 	});
@@ -162,6 +167,7 @@ public final class Machine {
 		}
 	    }
 	}
+	
 
 	Lib.seedRandom(randomSeed);
     }

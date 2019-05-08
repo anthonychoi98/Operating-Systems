@@ -3,7 +3,17 @@ package nachos.userprog;
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
+import java.util.*;
 
+//hold pid and corresponding userProcess and time it is put on queue 
+/**TASK 3**/
+class Process{
+	int pid;
+	UserProcess UserProcess;
+	int time;
+	
+}
+/**TASK 3**/ 
 /**
  * A kernel that can support multiple user processes.
  */
@@ -27,6 +37,13 @@ public class UserKernel extends ThreadedKernel {
 	Machine.processor().setExceptionHandler(new Runnable() {
 		public void run() { exceptionHandler(); }
 	    });
+	    
+	/**TASK 2 freePages initialization, I put it here but if it should have its own initializePages() then move it there**/
+	freePages = new LinkedList<Integer>();
+	for(int i =0; i < Machine.processor().getNumPhysPages(); i++) {
+		freePages.add(i);
+	}
+	/**TASK 2**/
     }
 
     /**
@@ -106,10 +123,133 @@ public class UserKernel extends ThreadedKernel {
     public void terminate() {
 	super.terminate();
     }
+ 
+	
+/**TASK 3 IMPLEMENTATIONS**/
+	
+     /**
+     * 
+     * 
+     * @param pid
+     * @return Process found with corresponding pid for userprocess in userProcessQ
+     */
+    public static Process findProcess(int pid) {
+		Iterator<Process> itr = userProcessQ.iterator();
+		while(itr.hasNext()) {
+			Process found = itr.next();
+			if(found.pid == pid) {
+				return found;
+			}
+		}
+		return null;
+	}
+	
+	  /**
+     * 
+     * 
+     * @param pid
+     * @return UserProcess found with corresponding pid for userprocess in userProcessQ
+     */
+    public static UserProcess findUserProcess(int pid) {
+		Iterator<Process> itr = userProcessQ.iterator();
+		while(itr.hasNext()) {
+			Process found = itr.next();
+			if(found.pid == pid) {
+				return found.UserProcess;
+			}
+		}
+		return null;
+	}
+    /**
+     * 
+     * @return next pid kept in track by userKernel
+     */
+    public static int nextPid() {
+    	       return UPpid;
+    }
+    /**
+     * 
+     * 
+     * @param pid
+     * @param proc
+     * @return userprocess
+     * add Process with id to Queue
+     */
+    
+    public static UserProcess addProcess(int pid, UserProcess proc) {
+    		
+    		Machine.interrupt().disable();
+    		Process newProcess = new Process();
+    		newProcess.pid = pid;
+    		newProcess.UserProcess = proc;
+    		newProcess.time = time;
+    		time++;
+    		UPpid++;
+    		userProcessQ.add(newProcess); //add to Queue next process
+    		Machine.interrupt().enable();
+    		
+    		return newProcess.UserProcess;
+    		
+    			
+    }
+	/**Function to add a new page onto free pages if it is not there already**/
+    public static void newPageFree(int num) {
+    	
+    	if(num < Machine.processor().getNumPhysPages() && num >-1 && !(freePages.contains(num))) {
+    		Machine.interrupt().disable();
+    		freePages.add(num);
+    		Machine.interrupt().enable();
+    	}
+    }
+    /**
+     * 
+     * 
+     * @param pid
+     * 
+     * @return UserProcess of removed process pid
+     * 
+     */
+    public static UserProcess removeProcess(int pid) {
+    		Process removeFound = null;
+    		Machine.interrupt().disable();
+    		removeFound = findProcess(pid);
+    		if(removeFound != null) {
+    			userProcessQ.remove(removeFound); //remove found item
+    		}
+    		Machine.interrupt().enable();
+    		
+    		return removeFound.UserProcess;
+    }
 
+/** END OF TASK 3 IMPLEMENTATIONS **/
+	
+	
+	
+    /**Task 2 freePages**/
+    static LinkedList<Integer> freePages;
+	
+	
     /** Globally accessible reference to the synchronized console. */
     public static SynchConsole console;
 
     // dummy variables to make javac smarter
     private static Coff dummy1 = null;
+	
+/**TASK 3 VARIABLES AND DATA STRUCTURE**/
+	//use priority queue to hold userProcess with pid
+    static PriorityQueue<Process> userProcessQ = new PriorityQueue<Process>(1000, new Comparator<Process>(){
+		@Override
+		public int compare(Process p1, Process p2){ 
+			if(p1.pid > p2.pid) return 1;//make switch, thread1 should be after thread2
+		    else if(p1.pid < p2.pid) return -1; //correct spots thread1 should be before thread2
+		    else return 0;
+		
+	}
+		});
+	
+     //pid and time counters
+    static int UPpid = 1;
+    static int time = 0;
+	
+	/**END OF TASK 3 VARIABLES AND DATA STRUCTURE**/
 }
