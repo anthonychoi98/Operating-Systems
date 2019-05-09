@@ -189,20 +189,7 @@ public class KThread {
 		Lib.debug(dbgThread, "Finishing thread: " + currentThread.toString());
 		
 		Machine.interrupt().disable();
-		
-		//wake up other threads that were waiting on this thread to be finished.
-		ThreadQueue joiningQueue = currentThread.getJoinQueue();
-		if(joiningQueue != null) {
-			KThread nextJoinedThread = joiningQueue.nextThread();
-			while ( nextJoinedThread != null ) {
-			    nextJoinedThread.ready();
-			    joiningQueue.acquire(nextJoinedThread);
-			    nextJoinedThread = joiningQueue.nextThread();
-			}
-		}
-	
-		
-	
+		/*--> inocrrect REDO
 		Machine.autoGrader().finishingCurrentThread();
 	
 		Lib.assertTrue(toBeDestroyed == null);
@@ -212,10 +199,38 @@ public class KThread {
 		currentThread.status = statusFinished;
 		
 		sleep();
+	}*/
+		
+		//we need to ensure that the other threads will be waiting for the thread
+		//to be finished before joining or gaining access to resource
+		ThreadQueue joiningQueue = currentThread.getJoinQueue();
+		if(joiningQueue != null) {
+			KThread nextJoinedThread = joiningQueue.nextThread();
+			// 	while ((waitThread = currentThread.waitForJoin.nextThread()) != null) {
+			while ( nextJoinedThread != null ) {
+			    nextJoinedThread.ready();
+			    joiningQueue.acquire(nextJoinedThread);
+			    nextJoinedThread = joiningQueue.nextThread();
+			}
+			//sleep();
+		}
+	
+		
+	
+		Machine.autoGrader().finishingCurrentThread();
+	
+		Lib.assertTrue(toBeDestroyed == null); //if there is nothing to be destroyed
+		toBeDestroyed = currentThread;
+		//then the next thread will need to be after gaining access to resource
+	
+		currentThread.status = statusFinished;	//thread is finished
+		
+		sleep();	//call sleep method
     }
     
+    //create getJoinQueue() for ThreadQueue class
     public ThreadQueue getJoinQueue() {
-    	return this.joiningQueue;
+    	return this.joiningQueue;	//return thread from joiningQueue
     }
 
     /**
@@ -263,10 +278,19 @@ public class KThread {
 		Lib.debug(dbgThread, "Sleeping thread: " + currentThread.toString());
 		
 		Lib.assertTrue(Machine.interrupt().disabled());
-	
-		if (currentThread.status != statusFinished)
-		    currentThread.status = statusBlocked;
-	
+	//Lib.assertTrue(status != statusReady);
+		
+		//status = statusReady; 
+		
+		/*--> REDO
+		 * 	if (this != idleThread)
+			readyQueue.waitForAccess(this);
+
+		Machine.autoGrader().readyThread(this);
+	}*/
+		if (currentThread.status != statusFinished) //if not finished
+		    currentThread.status = statusBlocked; //then don't allow next thread access yet
+	//run
 		runNextThread();
     }
 
@@ -297,13 +321,23 @@ public class KThread {
     	
     	Lib.assertTrue(this != currentThread);
 		Lib.debug(dbgThread, "Joining to thread: " + toString());
-		
+		// TASK 1 --> REDO
+	//			boolean intStatus = Machine.interrupt().disable();
 		
 		Machine.interrupt().disable();
+		// so the current thread will wait for this thread
+				// not need to wait if the thread is already dead
        if(joiningQueue == null){
         	joiningQueue = ThreadedKernel.scheduler.newThreadQueue(true);
     	}
-	    
+	    /*
+	     * 	if (status != statusFinished) {
+			waitForJoin.waitForAccess(currentThread);
+			KThread.sleep();
+		}
+
+		Machine.interrupt().restore(intStatus);
+	}*/
         if (currentThread != this && status != statusFinished) {
        	joiningQueue.acquire(this);
         	joiningQueue.waitForAccess(currentThread);
@@ -326,8 +360,12 @@ public class KThread {
 		Lib.assertTrue(idleThread == null);
 		
 		idleThread = new KThread(new Runnable() {
-		    public void run() { while (true) yield(); }
+		    public void run() { 
+		    	while (true) 
+		    		yield(); 
+		    	}
 		});
+		
 		idleThread.setName("idle");
 	
 		Machine.autoGrader().setIdleThread(idleThread);
@@ -420,6 +458,18 @@ public class KThread {
 		    this.which = which;
 		}
 		
+		/*
+		 * @Override
+		public void run() {
+		    for (int i=0; i<5; i++) {
+			System.out.println("*** thread " + which + " looped "
+					   + i + " times");
+			currentThread.yield();
+		
+		    }
+		}
+		private int which;
+	}*/
 		public void run() {
 		    for (int i=0; i<5; i++) {
 			System.out.println("*** thread " + which + " looped "
@@ -444,9 +494,8 @@ public class KThread {
 		Machine.interrupt().disable();
 		readyQueue.print();
 		Machine.interrupt().enable();
-		
-		thread1.join(); // prevents alternating between parent thread, and forked thread from parent.
-		
+		//need to stop alternating the parent/fork thread
+		thread1.join(); 
 		Machine.interrupt().disable();
 		readyQueue.print();
 		Machine.interrupt().enable();
@@ -454,30 +503,40 @@ public class KThread {
 		//NOTE: machine interrupts allow us to share the CPU?
 		
 //		Machine.interrupt().disable();
-//		readyQueue.print();
-//		Machine.interrupt().enable();
-		
-		new PingTest(0).run(); // called from main thread that was initialized by Kernel.
-		
+		//call PingTest from main thread above
+		//I believe it was implemented in Kernel
+		new PingTest(0).run(); 
+		//join thread 2
 		KThread thread2 = new KThread(new PingTest(2)).setName("2nd forked thread");
 		thread2.fork();
-		//thread2.join();
 		
+		
+		//join thread 3
 		KThread thread3 = new KThread(new PingTest(3)).setName("3rd forked thread");
 		thread3.fork();
-		//thread3.join();
 		
+		//join thread 4
 		KThread thread4 = new KThread(new PingTest(4)).setName("4th forked thread");
 		thread4.fork();
-		//thread4.join();
 		
+		//join thread 5
 		KThread thread5 = new KThread(new PingTest(5)).setName("5th forked thread");
 		thread5.fork();
-
+		
+		//join thread 6
 		KThread thread6 = new KThread(new PingTest(6)).setName("6th forked thread");
 		thread6.fork();
 		
-		
+		/**
+		 * Tests whether this module is working.
+		 */
+	/*	public static void selfTest() {
+			Lib.debug(dbgThread, "Enter KThread.selfTest");
+
+			new KThread(new PingTest(1)).setName("forked thread").fork();
+			new PingTest(0).run();
+		}
+		*/
 		Machine.interrupt().disable();
 		readyQueue.print();
 		Machine.interrupt().enable();
@@ -509,17 +568,31 @@ public class KThread {
     private Runnable target;
     private TCB tcb;
 
-    /**
-     * Unique identifer for this thread. Used to deterministically compare
-     * threads.
-     */
+	/**
+	 * Initialize some unique variable to help identifiers to assist with the
+	 * implementations and uses of the threads. We need to do this to help compare threads
+	 */
+	
     private int id = numCreated++;
     /** Number of times the KThread constructor was called. */
     private static int numCreated = 0;
 
+    /*public PriorityQueue waitForJoin() {
+	// TODO Auto-generated method stub
+	return null;
+	}*/
     private static ThreadQueue readyQueue = null;
     private static KThread currentThread = null;
+  //private static boolean isJoined = false; //added as wellf
     private static KThread toBeDestroyed = null;
     private static KThread idleThread = null;
+//	private static boolean joinQueue = false;
     private ThreadQueue joiningQueue  = null;
+	// TASK 1.1
+//	ThreadQueue waitForJoin = ThreadedKernel.scheduler.newThreadQueue(true);
+	//ThreadQueue waitForJoin = ThreadedKernel.scheduler.newThreadQueue(false);
+	/*public PriorityQueue getJoinQueue() {
+		// TODO Auto-generated method stub
+		return null;
+	}*/
 }
