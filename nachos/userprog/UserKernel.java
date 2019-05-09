@@ -1,13 +1,12 @@
 package nachos.userprog;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.*;
 import nachos.machine.*;
 import nachos.threads.*;
 import nachos.userprog.*;
-import java.util.*;
-
-import java.util.ArrayList;
-import java.util.LinkedList;
-
 //hold pid and corresponding userProcess and time it is put on queue 
 /**TASK 3**/
 class Process{
@@ -16,51 +15,11 @@ class Process{
 	int time;
 
 }
-
+/**TASK 3**/ 
 /**
  * A kernel that can support multiple user processes.
  */
 public class UserKernel extends ThreadedKernel {
-
-	static LinkedList<Integer> freePages;
-	static ArrayList<Boolean> pageFree;
-
-	static {
-		initPages();
-	}
-
-	public static void initPages() {
-		freePages = new LinkedList<Integer>();
-		pageFree = new ArrayList<Boolean>();
-		for (int i=0; i<Machine.processor().getNumPhysPages(); i++) {
-			freePages.add(i);
-			pageFree.add(false);
-		}
-	}
-
-	public static int allocatePage() {
-		Machine.interrupt().disable();
-
-		if (freePages.size() < 1) {
-			Machine.interrupt().enable();
-			return -1;
-		} else {
-			int pageNum = freePages.pop();
-			Lib.assertTrue(pageFree.get(pageNum) == false);
-			pageFree.set(pageNum, true);
-			Machine.interrupt().enable();
-			return pageNum;
-		}
-	}
-
-	public static void deallocatePage(int pageNum) {
-		Machine.interrupt().disable();
-		Lib.assertTrue(pageFree.get(pageNum) == true);
-		pageFree.set(pageNum, false);
-		freePages.push(pageNum);
-		Machine.interrupt().enable();
-	}
-
 	/**
 	 * Allocate a new user kernel.
 	 */
@@ -75,7 +34,15 @@ public class UserKernel extends ThreadedKernel {
 	public void initialize(String[] args) {
 		super.initialize(args);
 
+		processLock = new Lock();
+		freePageList = new LinkedList<Integer>();
+		processAllocations = new HashMap<UserProcess, ArrayList<Integer>>();
 		console = new SynchConsole(Machine.console());
+
+		// initialize free page list
+		for (int i = 0; i < Machine.processor().getNumPhysPages(); i++) {
+			freePageList.add(i);
+		}
 
 		Machine.processor().setExceptionHandler(new Runnable() {
 			public void run() { exceptionHandler(); }
@@ -161,6 +128,66 @@ public class UserKernel extends ThreadedKernel {
 	}
 
 
+	// Task 2 methods **********************************
+	public static int allocate(UserProcess process) {
+		// want to allocate memory only if process holds the lock,
+		// if there are free pages.
+		if (!processLock.isHeldByCurrentThread()) {
+			return -1;
+		}
+		if (freePageList.isEmpty()) {
+			return -1;
+		}
+		int freePageNum = freePageList.poll();
+		if (processAllocations.containsKey(process)) {
+			processAllocations.get(process).add(freePageNum);
+		}
+		else {
+			// this is a new process, allocate memory for it.
+			ArrayList<Integer> arrList = new ArrayList<Integer>();
+			arrList.add(freePageNum);
+			processAllocations.put(process, arrList); // setup new key-value mapping
+		}
+		return freePageNum;
+	}
+
+	public void free(UserProcess process, int page) {
+		if (!processLock.isHeldByCurrentThread()) {
+			return;
+		}
+		if (!processAllocations.containsKey(process)) {
+			return;
+		}
+		if (freePageList.contains(page)) {
+			return;
+		}
+		processAllocations.get(process).remove(page);
+		freePageList.addLast(page);
+		return;
+	}
+
+	public static void freeAll(UserProcess process) {
+		if (!processLock.isHeldByCurrentThread()) {
+			return;
+		}
+		// check if process even has memory allocated
+		if (processAllocations.containsKey(process)) {
+			// if so, free all memory allocated.
+			freePageList.addAll(processAllocations.get(process));
+			processAllocations.remove(process);
+		}
+		return;
+	}
+
+	public static void acquire() {
+		processLock.acquire();
+	}
+
+	public static void release() {
+		processLock.release();
+	}
+
+	// ************************************************
 	/**TASK 3 IMPLEMENTATIONS**/
 
 	/**
@@ -179,7 +206,6 @@ public class UserKernel extends ThreadedKernel {
 		}
 		return null;
 	}
-
 	/**
 	 * 
 	 * 
@@ -203,6 +229,7 @@ public class UserKernel extends ThreadedKernel {
 	public static int nextPid() {
 		return UPpid;
 	}
+
 	/**
 	 * 
 	 * 
@@ -231,9 +258,9 @@ public class UserKernel extends ThreadedKernel {
 	/**Function to add a new page onto free pages if it is not there already**/
 	public static void newPageFree(int num) {
 
-		if(num < Machine.processor().getNumPhysPages() && num >-1 && !(freePages.contains(num))) {
+		if(num < Machine.processor().getNumPhysPages() && num >-1 && !(freePageList.contains(num))) {
 			Machine.interrupt().disable();
-			freePages.add(num);
+			freePageList.add(num);
 			Machine.interrupt().enable();
 		}
 	}
@@ -262,6 +289,11 @@ public class UserKernel extends ThreadedKernel {
 
 	/** Globally accessible reference to the synchronized console. */
 	public static SynchConsole console;
+
+	// Task 2 declarations
+	private static Lock processLock;
+	private static LinkedList<Integer> freePageList;
+	private static HashMap<UserProcess, ArrayList<Integer>> processAllocations;
 
 	// dummy variables to make javac smarter
 	private static Coff dummy1 = null;
